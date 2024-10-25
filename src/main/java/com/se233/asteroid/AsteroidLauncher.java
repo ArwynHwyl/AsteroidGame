@@ -8,7 +8,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 class GamePanel extends JPanel implements ActionListener, KeyListener, MouseListener, MouseMotionListener {
     private Timer timer;
@@ -16,6 +18,7 @@ class GamePanel extends JPanel implements ActionListener, KeyListener, MouseList
     private List<Asteroid> asteroids;
     private Boss boss;
     private Image backgroundImage;
+    private Set<Integer> activeKeys;
     public GamePanel() {
         this.setPreferredSize(new Dimension(800, 600));
         this.setBackground(Color.BLACK);
@@ -31,7 +34,7 @@ class GamePanel extends JPanel implements ActionListener, KeyListener, MouseList
         for (int i = 0; i < 10; i++) {
             asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600));
         }
-
+        activeKeys = new HashSet<>();
         timer = new Timer(16, this); // 60 FPS
         timer.start();
         addMouseListener(this);
@@ -47,29 +50,16 @@ class GamePanel extends JPanel implements ActionListener, KeyListener, MouseList
                 }
             }
         });
-        addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_A -> player.moveLeft();
-                    case KeyEvent.VK_D -> player.moveRight();
-                    case KeyEvent.VK_W -> player.moveUp();
-                    case KeyEvent.VK_S -> player.moveDown();
-                    case KeyEvent.VK_SPACE -> player.setShooting(true);
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                    player.setShooting(false);
-                }
-            }
-        });
+        addKeyListener(this);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        if (activeKeys.contains(KeyEvent.VK_W)) player.moveUp();
+        if (activeKeys.contains(KeyEvent.VK_S)) player.moveDown();
+        if (activeKeys.contains(KeyEvent.VK_A)) player.moveLeft();
+        if (activeKeys.contains(KeyEvent.VK_D)) player.moveRight();
+
         player.update();
         boss.update();
         for (Asteroid asteroid : asteroids) {
@@ -108,12 +98,18 @@ class GamePanel extends JPanel implements ActionListener, KeyListener, MouseList
 
     @Override
     public void keyPressed(KeyEvent e) {
-
+        activeKeys.add(e.getKeyCode()); // Add the key to the set when pressed
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+            player.setShooting(true);
+        }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-
+        activeKeys.remove(e.getKeyCode()); // Remove the key from the set when released
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+            player.setShooting(false);
+        }
     }
 
     @Override
