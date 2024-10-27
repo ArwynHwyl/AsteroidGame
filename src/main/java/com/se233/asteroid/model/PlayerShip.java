@@ -31,6 +31,7 @@ public class PlayerShip extends Character {
     private static final int SPRITE_HEIGHT = 80; // 320/4
     private static final int HORIZONTAL_ROW = 3; // Row for A/D movement
     private static final int VERTICAL_ROW = 2;   // Row for W/S movement
+
     private MovementDirection currentDirection = MovementDirection.NONE;
 
     private enum MovementDirection {
@@ -181,8 +182,6 @@ public class PlayerShip extends Character {
         currentRow = VERTICAL_ROW;
         logPosition();
     }
-
-    // Rest of the methods remain unchanged...
     public void shoot() {
         double radianAngle = Math.toRadians(angle - 90);
         double spawnDistance = SPRITE_HEIGHT / 2;
@@ -197,6 +196,33 @@ public class PlayerShip extends Character {
         if (shooting) {
             shoot();
         }
+    }
+    public void setUltimateShooting(boolean shooting) {
+        this.shooting = shooting;
+        if (shooting) {
+            Ultimateshoot();
+        }
+    }
+    public void Ultimateshoot() {
+        double radianAngle = Math.toRadians(angle - 90);
+        double spawnDistance = SPRITE_HEIGHT / 2;
+        double bulletX = x + spawnDistance * Math.cos(radianAngle);
+        double bulletY = y + spawnDistance * Math.sin(radianAngle);
+
+        int numberOfBullets = 5; // Number of bullets in the cone
+        double spreadAngle = 30; // Total spread angle of the cone in degrees
+        double startAngle = angle - 90 - (spreadAngle / 2);
+        double angleIncrement = spreadAngle / (numberOfBullets - 1);
+
+        for (int i = 0; i < numberOfBullets; i++) {
+            double currentAngle = startAngle + (i * angleIncrement);
+            double radianCurrentAngle = Math.toRadians(currentAngle);
+            double bulletSpawnX = x + spawnDistance * Math.cos(radianCurrentAngle);
+            double bulletSpawnY = y + spawnDistance * Math.sin(radianCurrentAngle);
+            bullets.add(new Bullet(bulletSpawnX, bulletSpawnY, currentAngle));
+        }
+
+        System.out.println("Pew! Pew!");
     }
 
     private void limitVelocity() {

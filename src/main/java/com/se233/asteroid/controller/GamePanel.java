@@ -124,6 +124,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             activeKeys.add(e.getKeyCode());
             if (e.getKeyCode() == KeyEvent.VK_SPACE) {
                 player.setShooting(true);
+            } if (e.getKeyCode() == KeyEvent.VK_E) {
+                player.setUltimateShooting(true);
             }
         }
     }
@@ -133,6 +135,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         activeKeys.remove(e.getKeyCode()); // Remove the key from the set when released
         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
             player.setShooting(false);
+        } if (e.getKeyCode() == KeyEvent.VK_E) {
+            player.setUltimateShooting(false);
         }
     }
 

@@ -42,7 +42,12 @@ public class Asteroid extends Character {
     @Override
     public void draw(Graphics2D g) {
         g.setColor(Color.GRAY);
-        g.fillOval((int) x - 20, (int) y - 20, 40, 40);
+        if (isLarge) {
+            g.fillOval((int) x - 20, (int) y - 20, 52, 52);
+        } else {
+            g.fillOval((int) x, (int) y, 40, 40);
+        }
+
 
         // Draw health bar
         g.setColor(Color.RED);
