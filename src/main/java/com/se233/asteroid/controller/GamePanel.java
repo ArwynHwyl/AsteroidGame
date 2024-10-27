@@ -185,7 +185,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         isExploding = false;
 
         // Load background
-        backgroundImage = new ImageIcon(getClass().getResource("/assets/878d4b7113a683135734352e68e00e58.gif")).getImage();
+        backgroundImage = new ImageIcon(getClass().getResource("/assets/bg.gif")).getImage();
 
         // Create initial asteroids
         spawnAsteroids();
