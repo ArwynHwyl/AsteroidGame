@@ -205,7 +205,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             double y = Math.random() * 600;
             double velocityX = Math.random() * 2 - 1;
             double velocityY = Math.random() * 2 - 1;
-            regularEnemies.add(new RegularEnemy(x, y, velocityX, velocityY, 0, 50));
+            RegularEnemy enemy = new RegularEnemy(x, y, velocityX, velocityY, 0, 50);
+            enemy.setTarget(player); // Set player as target
+            regularEnemies.add(enemy);
         }
     }
     private void handleExplosion() {
@@ -248,9 +250,20 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             asteroid.update();
         }
 
-        // Update regular enemies
+        // Update regular enemies and their bullets
         for (RegularEnemy enemy : regularEnemies) {
+            enemy.setTarget(player); // Ensure target is set
             enemy.update();
+
+            // Update and remove off-screen enemy bullets
+            List<Bullet> enemyBullets = enemy.getBullets();
+            for (int i = enemyBullets.size() - 1; i >= 0; i--) {
+                Bullet bullet = enemyBullets.get(i);
+                bullet.update();
+                if (bullet.isOffScreen(800, 600)) {
+                    enemyBullets.remove(i);
+                }
+            }
         }
     }
     private void checkCollisions() {
@@ -297,9 +310,19 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             }
         }
 
-        // Check player collision with asteroids and enemies
+        // Check enemy bullets collision with player
         if (!isExploding) {
             Rectangle playerBounds = player.getBounds();
+
+            // Check collision with enemy bullets
+            for (RegularEnemy enemy : regularEnemies) {
+                for (Bullet bullet : enemy.getBullets()) {
+                    if (bullet.getBounds().intersects(playerBounds)) {
+                        startExplosion();
+                        return;
+                    }
+                }
+            }
 
             // Check asteroid collisions
             for (Asteroid asteroid : asteroids) {

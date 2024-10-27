@@ -6,16 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RegularEnemy extends Character {
-    private static final int SHOOT_COOLDOWN = 60; // 1 second at 60 FPS
+    private static final int SHOOT_COOLDOWN = 120; // 2 seconds at 60 FPS (60 * 2 = 120)
     private int currentCooldown = 0;
     private List<Bullet> bullets;
     private PlayerShip target;
     private int maxHealth;
+    private static final double BULLET_SPEED = 1.0;
 
     public RegularEnemy(double x, double y, double velocityX, double velocityY, double angle, int health) {
         super(x, y, velocityX, velocityY, angle, health);
         this.bullets = new ArrayList<>();
         this.maxHealth = health;
+        // Start with random cooldown to prevent all enemies from shooting at once
+        this.currentCooldown = (int)(Math.random() * SHOOT_COOLDOWN);
     }
 
     public void setTarget(PlayerShip target) {
@@ -39,7 +42,7 @@ public class RegularEnemy extends Character {
             currentCooldown--;
         }
 
-        // If we have a target, try to shoot at it
+        // If we have a target and cooldown is done, shoot
         if (target != null && currentCooldown <= 0) {
             shoot();
             currentCooldown = SHOOT_COOLDOWN;
@@ -116,16 +119,22 @@ public class RegularEnemy extends Character {
 
     private void shoot() {
         if (target != null) {
-            double bulletSpeed = 5.0;
-
             // Calculate direction to target
             double dx = target.getX() - x;
             double dy = target.getY() - y;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
+            // Add slight randomization to make shots less perfect
+            double accuracy = 0.95; // 95% accuracy
+            if (Math.random() > accuracy) {
+                dx += (Math.random() - 0.5) * 20;
+                dy += (Math.random() - 0.5) * 20;
+                distance = Math.sqrt(dx * dx + dy * dy);
+            }
+
             // Normalize direction and multiply by bullet speed
-            dx = (dx / distance) * bulletSpeed;
-            dy = (dy / distance) * bulletSpeed;
+            dx = (dx / distance) * BULLET_SPEED;
+            dy = (dy / distance) * BULLET_SPEED;
 
             // Create bullet with calculated velocity
             Bullet bullet = new Bullet(x, y, angle);
