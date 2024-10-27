@@ -223,4 +223,26 @@ public class PlayerShip extends Character {
     private void logPosition() {
         logger.log(Level.INFO, String.format("PlayerShip Velocity (%.2f, %.2f)", velocityX, velocityY));
     }
+
+    public double getX() {
+        return x;
+    }
+
+
+    public double getY() {
+        return y;
+    }
+
+    public Rectangle getBounds() {
+        // ใช้ขนาดที่เล็กกว่า SPRITE_WIDTH/HEIGHT เล็กน้อย เพื่อให้การชนสมจริงมากขึ้น
+        int hitboxWidth = SPRITE_WIDTH / 3;  // ประมาณ 1/3 ของความกว้างสไปรต์
+        int hitboxHeight = SPRITE_HEIGHT / 3; // ประมาณ 1/3 ของความสูงสไปรต์
+
+        return new Rectangle(
+                (int)x - hitboxWidth/2,  // จุดเริ่มต้น x
+                (int)y - hitboxHeight/2, // จุดเริ่มต้น y
+                hitboxWidth,            // ความกว้างของ hitbox
+                hitboxHeight           // ความสูงของ hitbox
+        );
+    }
 }

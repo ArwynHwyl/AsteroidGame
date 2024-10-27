@@ -31,4 +31,16 @@ public class Boss extends Character {
             attackCooldown--;
         }
     }
+    public Rectangle getBounds() {
+        // ใช้ขนาดที่เล็กกว่า SPRITE_WIDTH/HEIGHT เล็กน้อย เพื่อให้การชนสมจริงมากขึ้น
+        int hitboxWidth = 0;  // ประมาณ 1/3 ของความกว้างสไปรต์
+        int hitboxHeight = 0; // ประมาณ 1/3 ของความสูงสไปรต์
+
+        return new Rectangle(
+                (int) x - hitboxWidth / 2,  // จุดเริ่มต้น x
+                (int) y - hitboxHeight / 2, // จุดเริ่มต้น y
+                hitboxWidth,            // ความกว้างของ hitbox
+                hitboxHeight           // ความสูงของ hitbox
+        );
+    }
 }
