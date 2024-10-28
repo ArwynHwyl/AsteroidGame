@@ -33,14 +33,21 @@ public class PlayerShip extends Character {
     private static final int VERTICAL_ROW = 2;   // Row for W/S movement
 
     // Sprite fields gunflash
+
     private static BufferedImage[] gunflashSprites;
     private static final int GUNFLASH_FRAMES = 4;
     private int currentGunflashFrame = -1; // -1 means no gunflash
-    private static final int GUNFLASH_ANIMATION_DELAY = 2;
+    private static final int GUNFLASH_ANIMATION_DELAY = 4;
     private int gunflashTick = 0;
     private static final int GUNFLASH_WIDTH = 64;
     private static final int GUNFLASH_HEIGHT = 64;
-
+    //Invincible bf spawn
+    private boolean isInvincible = false;
+    private int invincibleTicks = 0;
+    private static final int INVINCIBLE_DURATION = 120; // 2 วินาที (60 frames/วินาที)
+    private static final float BLINK_RATE = 0.125f;
+    private static final float SHIELD_ROTATION = 0.05f;
+    private float shieldAngle = 0;
     private MovementDirection currentDirection = MovementDirection.NONE;
 
     private enum MovementDirection {
@@ -142,25 +149,27 @@ public class PlayerShip extends Character {
 
     @Override
     public void update() {
-        x += velocityX;
-        y += velocityY;
-
-        velocityX *= DECELERATION;
-        velocityY *= DECELERATION;
-
-        isMoving = Math.abs(velocityX) > 0.01 || Math.abs(velocityY) > 0.01;
-
-        if (!isMoving) {
-            currentDirection = MovementDirection.NONE;
+        // อัปเดต invincibility
+        if (isInvincible) {
+            invincibleTicks--;
+            if (invincibleTicks <= 0) {
+                isInvincible = false;
+            }
+            // อัปเดตมุมของ shield effect
+            shieldAngle += SHIELD_ROTATION;
         }
 
-        if (x < 0) x = 800;
-        if (x > 800) x = 0;
-        if (y < 0) y = 600;
-        if (y > 600) y = 0;
+        // อัปเดตการเคลื่อนที่ของยาน
+        x += velocityX;
+        y += velocityY;
+        velocityX *= DECELERATION;
+        velocityY *= DECELERATION;
+        isMoving = Math.abs(velocityX) > 0.01 || Math.abs(velocityY) > 0.01;
 
+        // อัปเดต animation
         updateAnimation();
 
+        // อัปเดตกระสุน
         for (int i = bullets.size() - 1; i >= 0; i--) {
             Bullet bullet = bullets.get(i);
             bullet.update();
@@ -169,56 +178,90 @@ public class PlayerShip extends Character {
             }
         }
     }
-
     @Override
     public void draw(Graphics2D g) {
-        if (sprites != null && sprites[currentRow][currentFrame] != null) {
-            AffineTransform old = g.getTransform();
-
-            // เคลื่อนไปที่ตำแหน่งยาน
-            g.translate(x, y);
-
-            // หมุนตัวยาน
-            g.rotate(Math.toRadians(angle));
-
-            // วาดตัวยาน
-            g.drawImage(sprites[currentRow][currentFrame],
-                    -SPRITE_WIDTH/2,
-                    -SPRITE_HEIGHT/2,
-                    SPRITE_WIDTH,
-                    SPRITE_HEIGHT,
-                    null);
-
-            // วาด gunflash ถ้ากำลังเล่น animation
-            if (currentGunflashFrame >= 0 && gunflashSprites != null) {
-                // เก็บ transform ของตัวยานไว้
-                AffineTransform shipTransform = g.getTransform();
-
-                // หมุน gunflash 90 องศา
-                g.rotate(Math.toRadians(90));
-
-                // ย้าย gunflash ไปที่ส่วนบนของยาน
-                g.drawImage(gunflashSprites[currentGunflashFrame],
-                        SPRITE_HEIGHT/2 - 115,  // ย้ายไปด้านบนของยาน
-                        -GUNFLASH_WIDTH/2,  // กึ่งกลางตามแนวแกน x
-                        GUNFLASH_WIDTH,
-                        GUNFLASH_HEIGHT,
-                        null
-                );
-
-                // กลับไปที่ transform ของตัวยาน
-                g.setTransform(shipTransform);
-            }
-
-            g.setTransform(old);
+        // Draw shield effect when invincible
+        if (isInvincible) {
+            drawShieldEffect(g);
         }
 
-        // วาดกระสุน
+        // Draw ship with blinking effect when invincible
+        if (!isInvincible || (invincibleTicks * BLINK_RATE) % 1 > 0.5) {
+            if (sprites != null && sprites[currentRow][currentFrame] != null) {
+                AffineTransform old = g.getTransform();
+
+                // เคลื่อนไปที่ตำแหน่งยาน
+                g.translate(x, y);
+
+                // หมุนตัวยาน
+                g.rotate(Math.toRadians(angle));
+
+                // วาดตัวยาน
+                g.drawImage(sprites[currentRow][currentFrame],
+                        -SPRITE_WIDTH/2,
+                        -SPRITE_HEIGHT/2,
+                        SPRITE_WIDTH,
+                        SPRITE_HEIGHT,
+                        null);
+
+                // วาด gunflash ถ้ากำลังเล่น animation
+                if (currentGunflashFrame >= 0 && gunflashSprites != null) {
+                    // เก็บ transform ของตัวยานไว้
+                    AffineTransform shipTransform = g.getTransform();
+
+                    // หมุน gunflash 90 องศา
+                    g.rotate(Math.toRadians(90));
+
+                    // ย้าย gunflash ไปที่ส่วนบนของยาน
+                    g.drawImage(gunflashSprites[currentGunflashFrame],
+                            SPRITE_HEIGHT/2 - 115,  // ย้ายไปด้านบนของยาน
+                            -GUNFLASH_WIDTH/2,  // กึ่งกลางตามแนวแกน x
+                            GUNFLASH_WIDTH,
+                            GUNFLASH_HEIGHT,
+                            null
+                    );
+
+                    // กลับไปที่ transform ของตัวยาน
+                    g.setTransform(shipTransform);
+                }
+
+                g.setTransform(old);
+            }
+        }
+
+        // Draw all bullets
         for (Bullet bullet : bullets) {
             bullet.draw(g);
         }
     }
+    private void drawShieldEffect(Graphics2D g) {
+        int shieldSize = 60;
+        int numRings = 3;
 
+        AffineTransform old = g.getTransform();
+        g.translate(x, y);
+        g.rotate(shieldAngle);
+
+        for (int i = 0; i < numRings; i++) {
+            float alpha = (float) (0.15 - (i * 0.04));
+            g.setColor(new Color(1f, 1f, 1f, alpha));
+
+            int size = shieldSize + (i * 10);
+            g.drawOval(-size/2, -size/2, size, size);
+
+            // วาดเส้นตัดขวาง
+            double angle = Math.PI / 3; // 60 degrees
+            for (int j = 0; j < 6; j++) {
+                int x1 = (int)(Math.cos(angle * j) * (size/2));
+                int y1 = (int)(Math.sin(angle * j) * (size/2));
+                int x2 = (int)(Math.cos(angle * j + Math.PI) * (size/2));
+                int y2 = (int)(Math.sin(angle * j + Math.PI) * (size/2));
+                g.drawLine(x1, y1, x2, y2);
+            }
+        }
+
+        g.setTransform(old);
+    }
     private void startGunflashAnimation() {
         currentGunflashFrame = 0;
         gunflashTick = 0;
@@ -353,5 +396,12 @@ public class PlayerShip extends Character {
                 hitboxHeight              // ความสูงของ hitbox
         );
     }
+    public void setInvincible(boolean invincible) {
+        this.isInvincible = invincible;
+        this.invincibleTicks = invincible ? INVINCIBLE_DURATION : 0;
+    }
 
+    public boolean isInvincible() {
+        return isInvincible;
+    }
 }

@@ -18,7 +18,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     private Boss boss;
     private Image backgroundImage;
     private Set<Integer> activeKeys;
-
+    private List<Explosion> explosions;
     // Game state variables
     private int score = 0;
     private int lives = 3;
@@ -63,9 +63,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     private void initializeGame() {
         player = new PlayerShip(400, 300);
+        player.setInvincible(true);  // ตั้งค่าให้เป็นอมตะตอนเริ่มเกม
         asteroids = new ArrayList<>();
         regularEnemies = new ArrayList<>();
         secondTierEnemies = new ArrayList<>();
+        explosions = new ArrayList<>();
         boss = null;
         activeKeys = new HashSet<>();
         score = 0;
@@ -111,7 +113,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     private void updateGameObjects() {
         player.update();
-
+        explosions.removeIf(explosion -> {
+            explosion.update();
+            return explosion.isFinished();
+        });
         // Update regular enemies and their bullets
         for (RegularEnemy enemy : regularEnemies) {
             enemy.setTarget(player);
@@ -153,7 +158,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     private void startBossPhase() {
         bossPhaseStarted = true;
-        boss = new Boss(400, 300);
+        boss = new Boss(400, 300,player);
     }
 
     private void checkCollisions() {
@@ -170,15 +175,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             }
         }
 
-        // Check enemy bullets with player
-        checkEnemyCollisionsWithPlayer(playerBounds);
+        // ถ้าผู้เล่นกำลัง invincible ให้ข้ามการเช็คการชน
+        if (!player.isInvincible()) {
+            // Check enemy bullets with player
+            checkEnemyCollisionsWithPlayer(playerBounds);
 
-        // Check boss bullets with player
-        if (boss != null && boss.isAlive()) {
-            for (Bullet bullet : boss.getBullets()) {
-                if (bullet.getBounds().intersects(playerBounds)) {
-                    startExplosion();
-                    return;
+            // Check boss bullets with player
+            if (boss != null && boss.isAlive()) {
+                for (Bullet bullet : boss.getBullets()) {
+                    if (bullet.getBounds().intersects(playerBounds)) {
+                        startExplosion();
+                        return;
+                    }
                 }
             }
         }
@@ -189,6 +197,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         for (int j = asteroids.size() - 1; j >= 0; j--) {
             Asteroid asteroid = asteroids.get(j);
             if (bullet.getBounds().intersects(asteroid.getBounds())) {
+                explosions.add(new Explosion(bullet.getX(), bullet.getY()));
                 asteroid.hit();
                 if (asteroid.isDestroyed()) {
                     score += asteroid.isLarge() ? 2 : 1;
@@ -202,6 +211,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         for (int j = regularEnemies.size() - 1; j >= 0; j--) {
             RegularEnemy enemy = regularEnemies.get(j);
             if (bullet.getBounds().intersects(enemy.getBounds())) {
+                explosions.add(new Explosion(bullet.getX(), bullet.getY()));
                 enemy.hit();
                 if (enemy.isDestroyed()) {
                     score += 1;
@@ -215,6 +225,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         for (int j = secondTierEnemies.size() - 1; j >= 0; j--) {
             SecondTier enemy = secondTierEnemies.get(j);
             if (bullet.getBounds().intersects(enemy.getBounds())) {
+                explosions.add(new Explosion(bullet.getX(), bullet.getY()));
                 enemy.hit();
                 if (enemy.isDestroyed()) {
                     score += 2;
@@ -226,6 +237,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
         // Check boss collision
         if (boss != null && boss.isAlive() && bullet.getBounds().intersects(boss.getBounds())) {
+            explosions.add(new Explosion(bullet.getX(), bullet.getY()));
             boss.hit(10);
             if (!boss.isAlive()) {
                 score += 50;
@@ -240,6 +252,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     }
 
     private void checkEnemyCollisionsWithPlayer(Rectangle playerBounds) {
+        // ถ้าผู้เล่นกำลัง invincible ให้ข้ามการเช็ค
+        if (player.isInvincible()) return;
+
         // Check regular enemy bullets
         for (RegularEnemy enemy : regularEnemies) {
             if (checkEnemyBulletsWithPlayer(enemy.getBullets(), playerBounds) ||
@@ -293,6 +308,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 gameOverMessage = "GAME OVER - Final Score: " + score;
             } else {
                 player = new PlayerShip(400, 300);
+                player.setInvincible(true);  // ตั้งค่าให้เป็นอมตะตอนเกิดใหม่
+                if (boss != null) {
+                    boss.setTarget(player);
+                }
             }
         }
     }
@@ -327,6 +346,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             // Draw boss if active
             if (boss != null && boss.isAlive()) {
                 boss.draw(g2d);
+            }
+
+            // Draw explosions
+            for (Explosion explosion : explosions) {
+                explosion.draw(g2d);
             }
 
             drawHUD(g2d);
@@ -416,16 +440,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     public void mouseMoved(MouseEvent e) {}
 
     private void spawnAsteroids() {
-        for (int i = 0; i < 0; i++) {
+        for (int i = 0; i < 2; i++) {
             asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, true));
         }
-        for (int i = 0; i < 0; i++) {
+        for (int i = 0; i < 4; i++) {
             asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, false));
         }
     }
 
     private void spawnRegularEnemies() {
-        for (int i = 0; i < 0; i++) {
+        for (int i = 0; i < 4; i++) {
             double x = Math.random() * 800;
             double y = Math.random() * 600;
             double velocityX = Math.random() * 2 - 1;
@@ -437,7 +461,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     }
 
     private void spawnSecondTierEnemies() {
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 2; i++) {
             double x = Math.random() * 800;
             double y = Math.random() * 600;
             double velocityX = Math.random() * 2 - 1;

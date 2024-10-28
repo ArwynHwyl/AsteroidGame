@@ -17,19 +17,6 @@ abstract class Character {
         this.health = health;
     }
 
-    public void move() {
-        x += velocityX;
-        y += velocityY;
-        screenWrap();
-    }
-
-    protected void screenWrap() {
-        // Screen wrapping logic
-        if (x < 0) x = 800; // Assuming 800x600 screen size
-        if (x > 800) x = 0;
-        if (y < 0) y = 600;
-        if (y > 600) y = 0;
-    }
 
     public abstract void draw(Graphics2D g);
 
