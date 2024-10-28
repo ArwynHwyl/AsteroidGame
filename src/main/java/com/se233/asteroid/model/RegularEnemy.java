@@ -1,54 +1,68 @@
 package com.se233.asteroid.model;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RegularEnemy extends Character {
-    private static final int SHOOT_COOLDOWN = 120; // 2 seconds at 60 FPS (60 * 2 = 120)
+    private static final int SHOOT_COOLDOWN = 120;
     private int currentCooldown = 0;
     private List<Bullet> bullets;
     private PlayerShip target;
     private int maxHealth;
     private static final double BULLET_SPEED = 1.0;
+    private BufferedImage enemyImage;
+
+    // ค่าคงที่สำหรับขนาดของยานศัตรู
+    private static final int SHIP_WIDTH = 50;    // ปรับขนาดความกว้างของรูป
+    private static final int SHIP_HEIGHT = 40;   // ปรับขนาดความสูงของรูป
+    private static final int HITBOX_WIDTH = 45;  // ปรับขนาด hitbox ให้เล็กกว่ารูปเล็กน้อย
+    private static final int HITBOX_HEIGHT = 35; // ปรับขนาด hitbox ให้เล็กกว่ารูปเล็กน้อย
 
     public RegularEnemy(double x, double y, double velocityX, double velocityY, double angle, int health) {
         super(x, y, velocityX, velocityY, angle, health);
         this.bullets = new ArrayList<>();
         this.maxHealth = health;
-        // Start with random cooldown to prevent all enemies from shooting at once
         this.currentCooldown = (int)(Math.random() * SHOOT_COOLDOWN);
-    }
 
-    public void setTarget(PlayerShip target) {
-        this.target = target;
+        // โหลดรูปภาพ
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("/assets/Regular.png"));
+            Image originalImage = icon.getImage();
+
+            enemyImage = new BufferedImage(SHIP_WIDTH, SHIP_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = enemyImage.createGraphics();
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.drawImage(originalImage, 0, 0, SHIP_WIDTH, SHIP_HEIGHT, null);
+            g2d.dispose();
+        } catch (Exception e) {
+            System.err.println("Error loading enemy image: " + e.getMessage());
+        }
     }
 
     @Override
     public void update() {
-        // Update position
         x += velocityX;
         y += velocityY;
 
-        // Wrap around screen edges
-        if (x < -20) x = 820;
-        if (x > 820) x = -20;
-        if (y < -20) y = 620;
-        if (y > 620) y = -20;
+        // ปรับขอบเขตการ wrap around
+        if (x < -SHIP_WIDTH/2) x = 800 + SHIP_WIDTH/2;
+        if (x > 800 + SHIP_WIDTH/2) x = -SHIP_WIDTH/2;
+        if (y < -SHIP_HEIGHT/2) y = 600 + SHIP_HEIGHT/2;
+        if (y > 600 + SHIP_HEIGHT/2) y = -SHIP_HEIGHT/2;
 
-        // Update shooting cooldown
         if (currentCooldown > 0) {
             currentCooldown--;
         }
 
-        // If we have a target and cooldown is done, shoot
         if (target != null && currentCooldown <= 0) {
             shoot();
             currentCooldown = SHOOT_COOLDOWN;
         }
 
-        // Update bullets
         for (int i = bullets.size() - 1; i >= 0; i--) {
             Bullet bullet = bullets.get(i);
             bullet.update();
@@ -57,7 +71,6 @@ public class RegularEnemy extends Character {
             }
         }
 
-        // Update angle to face target
         if (target != null) {
             double dx = target.getX() - x;
             double dy = target.getY() - y;
@@ -67,76 +80,56 @@ public class RegularEnemy extends Character {
 
     @Override
     public void draw(Graphics2D g) {
-        // Store the current transform
-        AffineTransform oldTransform = g.getTransform();
+        if (enemyImage != null) {
+            AffineTransform transform = new AffineTransform();
+            transform.translate(x - SHIP_WIDTH/2, y - SHIP_HEIGHT/2);
+            transform.rotate(Math.toRadians(angle), SHIP_WIDTH/2, SHIP_HEIGHT/2);
+            g.drawImage(enemyImage, transform, null);
 
-        // Move to enemy position
-        g.translate(x, y);
-        g.rotate(Math.toRadians(angle));
+            // Debug: แสดง hitbox (ถ้าต้องการดู)
+            // Rectangle bounds = getBounds();
+            // g.setColor(Color.RED);
+            // g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
 
-        // Draw the enemy ship
-        drawShip(g);
-
-        // Restore the original transform
-        g.setTransform(oldTransform);
-
-        // Draw health bar
         drawHealthBar(g);
 
-        // Draw bullets
         for (Bullet bullet : bullets) {
             bullet.draw(g);
         }
     }
 
-    private void drawShip(Graphics2D g) {
-        // Main body
-        g.setColor(Color.RED);
-        int[] xPoints = {15, -15, -15};
-        int[] yPoints = {0, -10, 10};
-        g.fillPolygon(xPoints, yPoints, 3);
-
-        // Wing details
-        g.setColor(Color.ORANGE);
-        g.fillRect(-10, -12, 5, 24);
-    }
-
     private void drawHealthBar(Graphics2D g) {
-        int healthBarWidth = 40;
-        int healthBarHeight = 4;
+        int healthBarWidth = 100;  // เพิ่มขนาด health bar
+        int healthBarHeight = 6;   // เพิ่มความสูง health bar
         int currentHealthWidth = (int)((health / (double)maxHealth) * healthBarWidth);
 
-        // Background of health bar
+        // ย้ายตำแหน่ง health bar ให้อยู่เหนือรูป
         g.setColor(new Color(255, 0, 0, 128));
-        g.fillRect((int)x - healthBarWidth/2, (int)y - 25,
+        g.fillRect((int)x - healthBarWidth/2, (int)y - SHIP_HEIGHT/2 - 15,
                 healthBarWidth, healthBarHeight);
 
-        // Current health
         g.setColor(new Color(0, 255, 0, 192));
-        g.fillRect((int)x - healthBarWidth/2, (int)y - 25,
+        g.fillRect((int)x - healthBarWidth/2, (int)y - SHIP_HEIGHT/2 - 15,
                 currentHealthWidth, healthBarHeight);
     }
 
     private void shoot() {
         if (target != null) {
-            // Calculate direction to target
             double dx = target.getX() - x;
             double dy = target.getY() - y;
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Add slight randomization to make shots less perfect
-            double accuracy = 0.95; // 95% accuracy
+            double accuracy = 0.95;
             if (Math.random() > accuracy) {
                 dx += (Math.random() - 0.5) * 20;
                 dy += (Math.random() - 0.5) * 20;
                 distance = Math.sqrt(dx * dx + dy * dy);
             }
 
-            // Normalize direction and multiply by bullet speed
             dx = (dx / distance) * BULLET_SPEED;
             dy = (dy / distance) * BULLET_SPEED;
 
-            // Create bullet with calculated velocity
             Bullet bullet = new Bullet(x, y, angle);
             bullet.setVelocity(dx, dy);
             bullets.add(bullet);
@@ -144,7 +137,13 @@ public class RegularEnemy extends Character {
     }
 
     public Rectangle getBounds() {
-        return new Rectangle((int)x - 15, (int)y - 10, 30, 20);
+        // ปรับ hitbox ให้เล็กกว่ารูปเล็กน้อยเพื่อความเหมาะสมในการเล่น
+        return new Rectangle(
+                (int)(x - HITBOX_WIDTH/2),
+                (int)(y - HITBOX_HEIGHT/2),
+                HITBOX_WIDTH,
+                HITBOX_HEIGHT
+        );
     }
 
     public void hit() {
@@ -157,5 +156,8 @@ public class RegularEnemy extends Character {
 
     public List<Bullet> getBullets() {
         return bullets;
+    }
+    public void setTarget(PlayerShip target) {
+        this.target = target;
     }
 }

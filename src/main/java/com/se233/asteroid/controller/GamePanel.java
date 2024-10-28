@@ -1,7 +1,6 @@
 package com.se233.asteroid.controller;
 
 import com.se233.asteroid.model.*;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -15,6 +14,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     private PlayerShip player;
     private List<Asteroid> asteroids;
     private List<RegularEnemy> regularEnemies;
+    private List<SecondTier> secondTierEnemies;
     private Boss boss;
     private Image backgroundImage;
     private Set<Integer> activeKeys;
@@ -23,23 +23,33 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     private int score = 0;
     private int lives = 3;
     private boolean gameOver = false;
+    private boolean gameSucceeded = false;
     private String gameOverMessage = "";
+    private String gameSucceedMessage = "YOU WIN! Final Score: ";
     private boolean isExploding = false;
     private int explosionTicks = 0;
     private static final int EXPLOSION_DURATION = 60;
+
+    // Boss phase variables
+    private boolean bossPhaseStarted = false;
+    private boolean bossDefeated = false;
+
     public GamePanel() {
         this.setPreferredSize(new Dimension(800, 600));
-
         initializeGame();
-
         timer = new Timer(16, this); // 60 FPS
         timer.start();
+
+        // Add input listeners
         addMouseListener(this);
         addMouseMotionListener(this);
         setFocusable(true);
+        addKeyListener(this);
+
+        // Mouse controls for rotation
         addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
                 if (!gameOver) {
                     if (SwingUtilities.isLeftMouseButton(e)) {
                         player.rotateLeft();
@@ -49,171 +59,229 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 }
             }
         });
-        addKeyListener(this);
     }
 
+    private void initializeGame() {
+        player = new PlayerShip(400, 300);
+        asteroids = new ArrayList<>();
+        regularEnemies = new ArrayList<>();
+        secondTierEnemies = new ArrayList<>();
+        boss = null;
+        activeKeys = new HashSet<>();
+        score = 0;
+        lives = 3;
+        gameOver = false;
+        bossPhaseStarted = false;
+        bossDefeated = false;
+        isExploding = false;
+
+        // Load background
+        backgroundImage = new ImageIcon(getClass().getResource("/assets/bg.gif")).getImage();
+
+        // Spawn initial enemies
+        spawnAsteroids();
+        spawnRegularEnemies();
+        spawnSecondTierEnemies();
+    }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (gameOver) {
-            return;
-        }
+        if (gameOver) return;
 
         if (isExploding) {
             handleExplosion();
             return;
         }
 
-        // Handle player movement
+        // Update game objects
         handlePlayerMovement();
-
-        // Update all game objects
         updateGameObjects();
-
-        // Check all collisions
         checkCollisions();
-
-        // Check if we need to spawn more enemies
-        checkEnemySpawning();
+        checkBossSpawning();
 
         repaint();
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
+    private void handlePlayerMovement() {
+        if (activeKeys.contains(KeyEvent.VK_W)) player.moveUp();
+        if (activeKeys.contains(KeyEvent.VK_S)) player.moveDown();
+        if (activeKeys.contains(KeyEvent.VK_A)) player.moveLeft();
+        if (activeKeys.contains(KeyEvent.VK_D)) player.moveRight();
+    }
 
-        // Draw background
-        g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+    private void updateGameObjects() {
+        player.update();
 
-        // Draw game objects if not game over
-        if (!gameOver) {
-            // Draw all game objects
-            if (!isExploding) {
-                player.draw(g2d);
-            } else {
-                drawExplosion(g2d);
+        // Update regular enemies and their bullets
+        for (RegularEnemy enemy : regularEnemies) {
+            enemy.setTarget(player);
+            enemy.update();
+            updateEnemyBullets(enemy.getBullets());
+        }
+
+        // Update second tier enemies
+        for (SecondTier enemy : secondTierEnemies) {
+            enemy.setTarget(player);
+            enemy.update();
+            updateEnemyBullets(enemy.getBullets());
+        }
+
+        // Update asteroids
+        for (Asteroid asteroid : asteroids) {
+            asteroid.update();
+        }
+
+        // Update boss if present
+        if (boss != null && boss.isAlive()) {
+            boss.update();
+        }
+    }
+
+    private void updateEnemyBullets(List<Bullet> bullets) {
+        bullets.removeIf(bullet -> bullet.isOffScreen(getWidth(), getHeight()));
+        for (Bullet bullet : bullets) {
+            bullet.update();
+        }
+    }
+
+    private void checkBossSpawning() {
+        if (!bossPhaseStarted && asteroids.isEmpty() && regularEnemies.isEmpty() &&
+                secondTierEnemies.isEmpty()) {
+            startBossPhase();
+        }
+    }
+
+    private void startBossPhase() {
+        bossPhaseStarted = true;
+        boss = new Boss(400, 300);
+        // You could add dramatic effects or messages here
+    }
+
+    private void checkCollisions() {
+        if (isExploding) return;
+
+        Rectangle playerBounds = player.getBounds();
+
+        // Check player bullets with enemies and boss
+        for (int i = player.getBullets().size() - 1; i >= 0; i--) {
+            Bullet bullet = player.getBullets().get(i);
+            boolean bulletHit = checkBulletCollisions(bullet);
+            if (bulletHit) {
+                player.getBullets().remove(i);
             }
-
-
-
-            for (Asteroid asteroid : asteroids) {
-                asteroid.draw(g2d);
-            }
-
-            for (RegularEnemy enemy : regularEnemies) {
-                enemy.draw(g2d);
-            }
-
-            // Draw HUD
-            drawHUD(g2d);
-        } else {
-            // Draw game over screen
-            drawGameOver(g2d);
         }
-    }
-    @Override
-    public void keyTyped(KeyEvent e) {
 
-    }
+        // Check enemy bullets with player
+        checkEnemyCollisionsWithPlayer(playerBounds);
 
-    @Override
-    public void keyPressed(KeyEvent e) {
-        if (!gameOver) {
-            activeKeys.add(e.getKeyCode());
-            if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                player.setShooting(true);
-            } if (e.getKeyCode() == KeyEvent.VK_E) {
-                player.setUltimateShooting(true);
+        // Check boss bullets with player
+        if (boss != null && boss.isAlive()) {
+            for (Bullet bullet : boss.getBullets()) {
+                if (bullet.getBounds().intersects(playerBounds)) {
+                    startExplosion();
+                    return;
+                }
             }
         }
     }
 
-    @Override
-    public void keyReleased(KeyEvent e) {
-        activeKeys.remove(e.getKeyCode()); // Remove the key from the set when released
-        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-            player.setShooting(false);
-        } if (e.getKeyCode() == KeyEvent.VK_E) {
-            player.setUltimateShooting(false);
+    private boolean checkBulletCollisions(Bullet bullet) {
+        // Check asteroid collisions
+        for (int j = asteroids.size() - 1; j >= 0; j--) {
+            Asteroid asteroid = asteroids.get(j);
+            if (bullet.getBounds().intersects(asteroid.getBounds())) {
+                asteroid.hit();
+                if (asteroid.isDestroyed()) {
+                    score += asteroid.isLarge() ? 2 : 1;
+                    asteroids.remove(j);
+                }
+                return true;
+            }
+        }
+
+        // Check regular enemy collisions
+        for (int j = regularEnemies.size() - 1; j >= 0; j--) {
+            RegularEnemy enemy = regularEnemies.get(j);
+            if (bullet.getBounds().intersects(enemy.getBounds())) {
+                enemy.hit();
+                if (enemy.isDestroyed()) {
+                    score += 1;
+                    regularEnemies.remove(j);
+                }
+                return true;
+            }
+        }
+
+        // Check second tier enemy collisions
+        for (int j = secondTierEnemies.size() - 1; j >= 0; j--) {
+            SecondTier enemy = secondTierEnemies.get(j);
+            if (bullet.getBounds().intersects(enemy.getBounds())) {
+                enemy.hit();
+                if (enemy.isDestroyed()) {
+                    score += 2;
+                    secondTierEnemies.remove(j);
+                }
+                return true;
+            }
+        }
+
+        // Check boss collision
+        if (boss != null && boss.isAlive() && bullet.getBounds().intersects(boss.getBounds())) {
+            boss.hit(10);
+            if (!boss.isAlive()) {
+                score += 50;
+                bossDefeated = true;
+                gameSucceeded = true;
+                gameSucceedMessage += score;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private void checkEnemyCollisionsWithPlayer(Rectangle playerBounds) {
+        // Check regular enemy bullets
+        for (RegularEnemy enemy : regularEnemies) {
+            if (checkEnemyBulletsWithPlayer(enemy.getBullets(), playerBounds) ||
+                    playerBounds.intersects(enemy.getBounds())) {
+                startExplosion();
+                return;
+            }
+        }
+
+        // Check second tier enemy bullets
+        for (SecondTier enemy : secondTierEnemies) {
+            if (checkEnemyBulletsWithPlayer(enemy.getBullets(), playerBounds) ||
+                    playerBounds.intersects(enemy.getBounds())) {
+                startExplosion();
+                return;
+            }
+        }
+
+        // Check asteroid collisions
+        for (Asteroid asteroid : asteroids) {
+            if (playerBounds.intersects(asteroid.getBounds())) {
+                startExplosion();
+                return;
+            }
         }
     }
 
-    @Override
-    public void mouseClicked(java.awt.event.MouseEvent e) {
-
-    }
-
-    @Override
-    public void mousePressed(java.awt.event.MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseReleased(java.awt.event.MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseEntered(java.awt.event.MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseExited(java.awt.event.MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseDragged(java.awt.event.MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseMoved(java.awt.event.MouseEvent e) {
-    }
-    private void initializeGame() {
-        player = new PlayerShip(400, 300);
-        asteroids = new ArrayList<>();
-        regularEnemies = new ArrayList<>();
-        boss = new Boss(600, 300);
-        activeKeys = new HashSet<>();
-        score = 0;
-        lives = 3;
-        gameOver = false;
-        isExploding = false;
-
-        // Load background
-        backgroundImage = new ImageIcon(getClass().getResource("/assets/bg.gif")).getImage();
-
-        // Create initial asteroids
-        spawnAsteroids();
-
-        // Create some regular enemies
-        spawnRegularEnemies();
-    }
-    private void spawnAsteroids() {
-        for (int i = 0; i < 5; i++) {
-            // Spawn large asteroids
-            asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, true));
+    private boolean checkEnemyBulletsWithPlayer(List<Bullet> bullets, Rectangle playerBounds) {
+        for (Bullet bullet : bullets) {
+            if (bullet.getBounds().intersects(playerBounds)) {
+                return true;
+            }
         }
-        for (int i = 0; i < 8; i++) {
-            // Spawn small asteroids
-            asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, false));
-        }
+        return false;
     }
-    private void spawnRegularEnemies() {
-        for (int i = 0; i < 3; i++) {
-            double x = Math.random() * 800;
-            double y = Math.random() * 600;
-            double velocityX = Math.random() * 2 - 1;
-            double velocityY = Math.random() * 2 - 1;
-            RegularEnemy enemy = new RegularEnemy(x, y, velocityX, velocityY, 0, 50);
-            enemy.setTarget(player); // Set player as target
-            regularEnemies.add(enemy);
-        }
+
+    private void startExplosion() {
+        isExploding = true;
+        explosionTicks = 0;
     }
+
     private void handleExplosion() {
         explosionTicks++;
         if (explosionTicks >= EXPLOSION_DURATION) {
@@ -225,147 +293,53 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 gameOver = true;
                 gameOverMessage = "GAME OVER - Final Score: " + score;
             } else {
-                // Respawn player
                 player = new PlayerShip(400, 300);
             }
         }
     }
-    private void handlePlayerMovement() {
-        if (activeKeys.contains(KeyEvent.VK_W)) player.moveUp();
-        if (activeKeys.contains(KeyEvent.VK_D)) player.moveRight();
-        if (activeKeys.contains(KeyEvent.VK_A)) player.moveLeft();
-        if (activeKeys.contains(KeyEvent.VK_S)) player.moveDown();
-    }
-    private void updateGameObjects() {
-        player.update();
-        boss.update();
 
-        // Update bullets and check for off-screen
-        for (int i = player.getBullets().size() - 1; i >= 0; i--) {
-            Bullet bullet = player.getBullets().get(i);
-            bullet.update();
-            if (bullet.isOffScreen(800, 600)) {
-                player.getBullets().remove(i);
-            }
-        }
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
 
-        // Update asteroids
-        for (Asteroid asteroid : asteroids) {
-            asteroid.update();
-        }
+        // Draw background
+        g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
 
-        // Update regular enemies and their bullets
-        for (RegularEnemy enemy : regularEnemies) {
-            enemy.setTarget(player); // Ensure target is set
-            enemy.update();
-
-            // Update and remove off-screen enemy bullets
-            List<Bullet> enemyBullets = enemy.getBullets();
-            for (int i = enemyBullets.size() - 1; i >= 0; i--) {
-                Bullet bullet = enemyBullets.get(i);
-                bullet.update();
-                if (bullet.isOffScreen(800, 600)) {
-                    enemyBullets.remove(i);
-                }
-            }
-        }
-    }
-    private void checkCollisions() {
-        // Check bullet collisions with asteroids and enemies
-        for (int i = player.getBullets().size() - 1; i >= 0; i--) {
-            Bullet bullet = player.getBullets().get(i);
-            boolean bulletHit = false;
-
-            // Check asteroid collisions
-            for (int j = asteroids.size() - 1; j >= 0; j--) {
-                Asteroid asteroid = asteroids.get(j);
-                if (bullet.getBounds().intersects(asteroid.getBounds())) {
-                    asteroid.hit();
-                    bulletHit = true;
-
-                    if (asteroid.isDestroyed()) {
-                        score += asteroid.isLarge() ? 2 : 1;
-                        asteroids.remove(j);
-                    }
-                    break;
-                }
+        if (!gameOver) {
+            // Draw game objects
+            if (!isExploding) {
+                player.draw(g2d);
+            } else {
+                drawExplosion(g2d);
             }
 
-            // Check regular enemy collisions
-            if (!bulletHit) {
-                for (int j = regularEnemies.size() - 1; j >= 0; j--) {
-                    RegularEnemy enemy = regularEnemies.get(j);
-                    if (bullet.getBounds().intersects(enemy.getBounds())) {
-                        enemy.hit();
-                        bulletHit = true;
-
-                        if (enemy.isDestroyed()) {
-                            score += 1;
-                            regularEnemies.remove(j);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // Remove bullet if it hit something
-            if (bulletHit) {
-                player.getBullets().remove(i);
-            }
-        }
-
-        // Check enemy bullets collision with player
-        if (!isExploding) {
-            Rectangle playerBounds = player.getBounds();
-
-            // Check collision with enemy bullets
-            for (RegularEnemy enemy : regularEnemies) {
-                for (Bullet bullet : enemy.getBullets()) {
-                    if (bullet.getBounds().intersects(playerBounds)) {
-                        startExplosion();
-                        return;
-                    }
-                }
-            }
-
-            // Check asteroid collisions
+            // Draw enemies and asteroids
             for (Asteroid asteroid : asteroids) {
-                if (playerBounds.intersects(asteroid.getBounds())) {
-                    startExplosion();
-                    return;
-                }
+                asteroid.draw(g2d);
             }
-
-            // Check regular enemy collisions
             for (RegularEnemy enemy : regularEnemies) {
-                if (playerBounds.intersects(enemy.getBounds())) {
-                    startExplosion();
-                    return;
-                }
+                enemy.draw(g2d);
+            }
+            for (SecondTier enemy : secondTierEnemies) {
+                enemy.draw(g2d);
             }
 
-            // Check boss collision
-            if (playerBounds.intersects(boss.getBounds())) {
-                startExplosion();
+            // Draw boss if active
+            if (boss != null && boss.isAlive()) {
+                boss.draw(g2d);
+            }
+
+            drawHUD(g2d);
+        } else {
+            if (bossDefeated) {
+                drawGameSucceeded(g2d);
+            } else {
+                drawGameOver(g2d);
             }
         }
     }
-    private void startExplosion() {
-        isExploding = true;
-        explosionTicks = 0;
-    }
 
-    private void checkEnemySpawning() {
-        // Spawn new asteroids if there are too few
-        if (asteroids.size() < 5) {
-            spawnAsteroids();
-        }
-
-        // Spawn new regular enemies if there are too few
-        if (regularEnemies.size() < 2) {
-            spawnRegularEnemies();
-        }
-    }
     private void drawExplosion(Graphics2D g2d) {
         g2d.setColor(Color.ORANGE);
         int size = 40 + (explosionTicks / 2);
@@ -377,6 +351,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         g2d.setFont(new Font("Arial", Font.BOLD, 20));
         g2d.drawString("Score: " + score, 20, 30);
         g2d.drawString("Lives: " + lives, 20, 60);
+
+        if (bossPhaseStarted && boss != null && boss.isAlive()) {
+            g2d.drawString("BOSS BATTLE", getWidth()/2 - 60, 30);
+        }
     }
 
     private void drawGameOver(Graphics2D g2d) {
@@ -387,4 +365,87 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         g2d.drawString(gameOverMessage, (getWidth() - textWidth) / 2, getHeight() / 2);
     }
 
+    private void drawGameSucceeded(Graphics2D g2d) {
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Arial", Font.BOLD, 40));
+        FontMetrics fm = g2d.getFontMetrics();
+        int textWidth = fm.stringWidth(gameSucceedMessage);
+        g2d.drawString(gameSucceedMessage, (getWidth() - textWidth) / 2, getHeight() / 2);
+    }
+
+    // Key Listeners
+    @Override
+    public void keyPressed(KeyEvent e) {
+        if (!gameOver) {
+            activeKeys.add(e.getKeyCode());
+            if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                player.setShooting(true);
+            }
+            if (e.getKeyCode() == KeyEvent.VK_E) {
+                player.setUltimateShooting(true);
+            }
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        activeKeys.remove(e.getKeyCode());
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+            player.setShooting(false);
+        }
+        if (e.getKeyCode() == KeyEvent.VK_E) {
+            player.setUltimateShooting(false);
+        }
+    }
+
+    // Required method implementations
+    @Override
+    public void keyTyped(KeyEvent e) {}
+    @Override
+    public void mouseClicked(MouseEvent e) {}
+    @Override
+    public void mousePressed(MouseEvent e) {}
+    @Override
+    public void mouseReleased(MouseEvent e) {}
+    @Override
+    public void mouseEntered(MouseEvent e) {}
+    @Override
+    public void mouseExited(MouseEvent e) {}
+    @Override
+    public void mouseDragged(MouseEvent e) {}
+    @Override
+    public void mouseMoved(MouseEvent e) {}
+
+    private void spawnAsteroids() {
+        for (int i = 0; i < 5; i++) {
+            asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, true));
+        }
+        for (int i = 0; i < 8; i++) {
+            asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, false));
+        }
+    }
+
+    private void spawnRegularEnemies() {
+        for (int i = 0; i < 3; i++) {
+            double x = Math.random() * 800;
+            double y = Math.random() * 600;
+            double velocityX = Math.random() * 2 - 1;
+            double velocityY = Math.random() * 2 - 1;
+            RegularEnemy enemy = new RegularEnemy(x, y, velocityX, velocityY, 0, 50);
+            enemy.setTarget(player);
+            regularEnemies.add(enemy);
+        }
+    }
+
+    private void spawnSecondTierEnemies() {
+        for (int i = 0; i < 2; i++) {
+            double x = Math.random() * 800;
+            double y = Math.random() * 600;
+            double velocityX = Math.random() * 2 - 1;
+            double velocityY = Math.random() * 2 - 1;
+            SecondTier enemy = new SecondTier(x, y, velocityX, velocityY, 0, 75);
+            enemy.setTarget(player);
+            secondTierEnemies.add(enemy);
+        }
+    }
 }
