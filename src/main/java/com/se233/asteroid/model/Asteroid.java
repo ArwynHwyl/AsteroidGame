@@ -13,12 +13,12 @@ public class Asteroid extends Character {
     private BufferedImage asteroidImage;
 
     // ขนาดต่างๆ คงเดิม
-    private static final int LARGE_WIDTH = 170;
-    private static final int LARGE_HEIGHT = 120;
-    private static final int SMALL_WIDTH = 140;
-    private static final int SMALL_HEIGHT = 100;
-    private static final int LARGE_HITBOX = 90;
-    private static final int SMALL_HITBOX = 70;
+    private static final int LARGE_WIDTH = 120;
+    private static final int LARGE_HEIGHT = 70;
+    private static final int SMALL_WIDTH = 90;
+    private static final int SMALL_HEIGHT = 50;
+    private static final int LARGE_HITBOX = 50;
+    private static final int SMALL_HITBOX = 25;
 
     // เพิ่มค่าคงที่สำหรับขอบเขตหน้าจอ
     private static final int SCREEN_WIDTH = 800;
@@ -59,14 +59,11 @@ public class Asteroid extends Character {
 
     @Override
     public void update() {
-        // อัปเดตตำแหน่ง
         x += velocityX;
         y += velocityY;
 
-        // อัปเดตการหมุน
         rotationAngle += rotationSpeed;
 
-        // ตรวจสอบและจัดการการชนขอบ
         handleScreenBounce();
     }
 
@@ -75,31 +72,26 @@ public class Asteroid extends Character {
         int boundHeight = isLarge ? LARGE_HEIGHT : SMALL_HEIGHT;
         boolean bounced = false;
 
-        // ตรวจสอบการชนขอบซ้าย-ขวา
         if (x - boundWidth/2 <= 0) {
             x = boundWidth/2;
-            velocityX = Math.abs(velocityX); // เด้งไปทางขวา
+            velocityX = Math.abs(velocityX);
             bounced = true;
         } else if (x + boundWidth/2 >= SCREEN_WIDTH) {
             x = SCREEN_WIDTH - boundWidth/2;
-            velocityX = -Math.abs(velocityX); // เด้งไปทางซ้าย
+            velocityX = -Math.abs(velocityX);
             bounced = true;
         }
-
-        // ตรวจสอบการชนขอบบน-ล่าง
         if (y - boundHeight/2 <= 0) {
             y = boundHeight/2;
-            velocityY = Math.abs(velocityY); // เด้งลงล่าง
+            velocityY = Math.abs(velocityY);
             bounced = true;
         } else if (y + boundHeight/2 >= SCREEN_HEIGHT) {
             y = SCREEN_HEIGHT - boundHeight/2;
-            velocityY = -Math.abs(velocityY); // เด้งขึ้นบน
+            velocityY = -Math.abs(velocityY);
             bounced = true;
         }
-
-        // เพิ่มเอฟเฟกต์เมื่อชนขอบ (เปลี่ยนความเร็วการหมุนเล็กน้อย)
         if (bounced) {
-            rotationSpeed = Math.random() * 2 - 1;  // สุ่มความเร็วการหมุนใหม่เมื่อชนขอบ
+            rotationSpeed = Math.random() * 2 - 1;
         }
     }
 

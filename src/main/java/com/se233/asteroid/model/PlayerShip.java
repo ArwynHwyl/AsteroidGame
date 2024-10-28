@@ -52,30 +52,22 @@ public class PlayerShip extends Character {
     private MovementDirection currentDirection = MovementDirection.NONE;
     // Beam laser fields
     private boolean firingBeam = false;
-
-    private static final int BEAM_MAX_LENGTH = 800; // Screen width
-    private int beamCharge = 100; // Maximum beam charge
-    private static final int BEAM_RECHARGE_RATE = 1; // How fast the beam recharges
-    private static final int BEAM_CONSUMPTION_RATE = 2; // How fast the beam uses charge
+    private static final int BEAM_MAX_LENGTH = 72;
+    private int beamCharge = 100;
+    private static final int BEAM_RECHARGE_RATE = 1;
+    private static final int BEAM_CONSUMPTION_RATE = 2;
     private boolean canFireBeam = true;
-    private static final int BEAM_SPRITE_COLUMNS = 8;
-    private int currentBeamPhase = -1; // -1 = ไม่ทำอะไร, 0-2 = เฟสการชาร์จ
     private static final int BEAM_SPAWN_DISTANCE = SPRITE_HEIGHT/2 + 46;
-    private int chargeTick = 0;
-    private boolean isCharging = false;
-    private boolean showChargingEffect = false;
-    private double effectX, effectY;
-    private BufferedImage[][] beamSprites; // เปลี่ยนเป็น 2D array
-    private static final int CHARGE_DELAY = 8;
+    private BufferedImage[][] beamSprites;
+    private static final int BEAM_ANIMATION_DELAY = 4; // Added animation delay
+    private int beamAnimationTick = 0; // Added animation tick
     private static final int BEAM_WIDTH = 40;
     private int currentBeamRow = 0;
     private int currentBeamCol = 0;
-    private static final int SPRITE_SHEET_WIDTH = 320;
-    private static final int SPRITE_SHEET_HEIGHT = 290;
     private static final int BEAM_SPRITE_ROWS = 4;
     private static final int BEAM_SPRITE_COLS = 2;
-    private static final int SINGLE_SPRITE_WIDTH = 160;  // Sprite width
-    private static final int SINGLE_SPRITE_HEIGHT = 72; // 290/4 (ปัดลง)
+    private static final int SINGLE_SPRITE_WIDTH = 160;
+    private static final int SINGLE_SPRITE_HEIGHT = 72;
 
     private enum MovementDirection {
         HORIZONTAL,
@@ -204,29 +196,27 @@ public class PlayerShip extends Character {
                 bullets.remove(i);
             }
         }
+
         if (!firingBeam && beamCharge < 100) {
             beamCharge += BEAM_RECHARGE_RATE;
             if (beamCharge >= 100) {
                 canFireBeam = true;
             }
         }
+
         if (firingBeam) {
             beamCharge -= BEAM_CONSUMPTION_RATE;
             if (beamCharge <= 0) {
                 firingBeam = false;
                 canFireBeam = false;
             }
-        }
-        if (isCharging) {
-            chargeTick++;
-            if (chargeTick >= CHARGE_DELAY) {
-                chargeTick = 0;
-                currentBeamPhase++;
-
-                if (currentBeamPhase >= BEAM_SPRITE_COLUMNS - 1) {
-                    isCharging = false;
-                    firingBeam = true;
-                    currentBeamPhase = -1;
+            // Update beam animation
+            beamAnimationTick++;
+            if (beamAnimationTick >= BEAM_ANIMATION_DELAY) {
+                beamAnimationTick = 0;
+                currentBeamCol = (currentBeamCol + 1) % BEAM_SPRITE_COLS;
+                if (currentBeamCol == 0) {
+                    currentBeamRow = (currentBeamRow + 1) % BEAM_SPRITE_ROWS;
                 }
             }
         }
@@ -312,12 +302,11 @@ public class PlayerShip extends Character {
     }
 
     private void drawBeam(Graphics2D g) {
-        if (!isCharging && !firingBeam) return;
+        if (!firingBeam) return;
 
         double radianAngle = Math.toRadians(angle - 90);
         AffineTransform old = g.getTransform();
 
-        // Calculate beam start position to match gunflash
         int startX = (int)(x + BEAM_SPAWN_DISTANCE * Math.cos(radianAngle));
         int startY = (int)(y + BEAM_SPAWN_DISTANCE * Math.sin(radianAngle));
 
@@ -325,29 +314,23 @@ public class PlayerShip extends Character {
         g.rotate(radianAngle);
 
         if (beamSprites != null) {
-            if (firingBeam) {
-                // Draw beam head sprite
-                BufferedImage headSprite = beamSprites[0][0];
-                int headWidth = SINGLE_SPRITE_WIDTH;
-                int headHeight = SINGLE_SPRITE_HEIGHT;
-                g.drawImage(headSprite,
-                        -headWidth/2,
-                        -headHeight/2,
-                        headWidth,
-                        headHeight,
-                        null);
-            } else if (isCharging) {
-                // Draw charging animation
-                BufferedImage chargeSprite = beamSprites[currentBeamRow][currentBeamCol];
-                int chargeWidth = SINGLE_SPRITE_WIDTH;
-                int chargeHeight = SINGLE_SPRITE_HEIGHT;
-                g.drawImage(chargeSprite,
-                        -chargeWidth/2,
-                        -chargeHeight/2,
-                        chargeWidth,
-                        chargeHeight,
-                        null);
-            }
+            BufferedImage currentSprite = beamSprites[currentBeamRow][currentBeamCol];
+            // วาด sprite ตามขนาดจริง
+            g.drawImage(currentSprite,
+                    -SINGLE_SPRITE_WIDTH/2,
+                    -SINGLE_SPRITE_HEIGHT/2,
+                    SINGLE_SPRITE_WIDTH,
+                    SINGLE_SPRITE_HEIGHT,
+                    null);
+
+            // For debugging: draw hitbox outline
+            g.setColor(Color.RED);
+            g.drawRect(
+                -SINGLE_SPRITE_WIDTH/2,
+                -SINGLE_SPRITE_HEIGHT/2,
+                SINGLE_SPRITE_WIDTH,
+                SINGLE_SPRITE_HEIGHT
+            );
         }
 
         g.setTransform(old);
@@ -380,32 +363,32 @@ public class PlayerShip extends Character {
         double radianAngle = Math.toRadians(angle - 90);
         int startX = (int)x;
         int startY = (int)y;
-        int endX = startX + (int)(Math.cos(radianAngle) * BEAM_MAX_LENGTH);
-        int endY = startY + (int)(Math.sin(radianAngle) * BEAM_MAX_LENGTH);
+        int endX = startX + (int)(Math.cos(radianAngle) * BEAM_MAX_LENGTH/2);
+        int endY = startY + (int)(Math.sin(radianAngle) * BEAM_MAX_LENGTH/2);
 
-        // สร้าง hitbox ที่มีขนาดเท่ากับ beam ที่เห็นจริง
-        // ใช้ BEAM_WIDTH/3 เพราะเป็นขนาดของ beam core ที่เราวาดจริง
-        int beamHitboxWidth = BEAM_WIDTH/3;
+        // Use a smaller beam width for the hitbox
+        int beamHitboxWidth = BEAM_WIDTH/6;
 
         return new Rectangle(
                 Math.min(startX, endX) - beamHitboxWidth/2,
                 Math.min(startY, endY) - beamHitboxWidth/2,
                 Math.abs(endX - startX) + beamHitboxWidth,
                 Math.abs(endY - startY) + beamHitboxWidth
-        );}
+        );
+    }
 
     public void setBeamFiring(boolean firing) {
-        if (firing && canFireBeam && beamCharge > 0 && !isCharging && !firingBeam) {
-            isCharging = true;
+        if (firing && canFireBeam && beamCharge > 0 && !firingBeam) {
+            firingBeam = true;
             currentBeamRow = 0;
             currentBeamCol = 0;
-            chargeTick = 0;
+            beamAnimationTick = 0;
         } else if (!firing) {
-            isCharging = false;
             firingBeam = false;
             currentBeamRow = 0;
             currentBeamCol = 0;
-        }}
+        }
+    }
 
     public boolean isBeamFiring() {
         return firingBeam;
@@ -593,53 +576,8 @@ public class PlayerShip extends Character {
             y = -SPRITE_HEIGHT/2;
         }
     }
-    private void updateBeamCharging() {
-        if (isCharging) {
-            chargeTick++;
-            if (chargeTick >= CHARGE_DELAY) {
-                chargeTick = 0;
 
-                // Update animation using Z pattern
-                if (currentBeamCol < BEAM_SPRITE_COLS - 1) {
-                    currentBeamCol++;
-                } else {
-                    currentBeamCol = 0;
-                    currentBeamRow++;
-                }
 
-                // Check if animation is complete
-                if (currentBeamRow >= BEAM_SPRITE_ROWS) {
-                    isCharging = false;
-                    firingBeam = true;
-                    currentBeamRow = 0;
-                    currentBeamCol = 0;
-
-                    // Store position for effect
-                    double radianAngle = Math.toRadians(angle - 90);
-                    effectX = x + BEAM_SPAWN_DISTANCE * Math.cos(radianAngle);
-                    effectY = y + BEAM_SPAWN_DISTANCE * Math.sin(radianAngle);
-                    showChargingEffect = true;
-                }
-            }
-        }
-    }
-    public boolean shouldShowChargingEffect() {
-        return showChargingEffect;
-    }
-
-    // เพิ่มเมธอดสำหรับดึงตำแหน่ง effect
-    public double getEffectX() {
-        return effectX;
-    }
-
-    public double getEffectY() {
-        return effectY;
-    }
-
-    // เพิ่มเมธอดสำหรับรีเซ็ต effect flag
-    public void resetChargingEffect() {
-        showChargingEffect = false;
-    }
 
     public class BeamHitbox {
         private double startX, startY;
@@ -681,13 +619,11 @@ public class PlayerShip extends Character {
             double closestX = startX + Math.max(0, Math.min(length, projection)) * dx;
             double closestY = startY + Math.max(0, Math.min(length, projection)) * dy;
 
-            // Check if closest point is within target bounds plus beam width
-            double distance = Math.sqrt(
+            // Use beam sprite width for collision detection
+            return Math.sqrt(
                     Math.pow(closestX - targetCenterX, 2) +
                             Math.pow(closestY - targetCenterY, 2)
-            );
-
-            return distance < (width/2 + Math.max(target.width, target.height)/2);
+            ) < (width/2 + Math.max(target.width, target.height)/2);
         }
     }
 
@@ -695,20 +631,23 @@ public class PlayerShip extends Character {
         if (!firingBeam) return null;
 
         double radianAngle = Math.toRadians(angle - 90);
-        double beamHitboxWidth = BEAM_WIDTH/4;
 
-        // Use updated BEAM_SPAWN_DISTANCE for hitbox calculation
+        // ใช้ความกว้างของ sprite beam จริงๆในการคำนวณ hitbox
+        double beamHitboxWidth = SINGLE_SPRITE_WIDTH/2; // ปรับขนาด hitbox ให้เท่ากับความกว้างของ sprite
+
+        // ระยะห่างจากตัวยานถึงจุดเริ่มต้นของ beam
         double startX = x + BEAM_SPAWN_DISTANCE * Math.cos(radianAngle);
         double startY = y + BEAM_SPAWN_DISTANCE * Math.sin(radianAngle);
+
+        // ความยาวของ beam ให้เท่ากับความสูงของ sprite
+        double beamLength = SINGLE_SPRITE_HEIGHT;
 
         return new BeamHitbox(
                 startX,
                 startY,
-                startX + Math.cos(radianAngle) * BEAM_MAX_LENGTH,
-                startY + Math.sin(radianAngle) * BEAM_MAX_LENGTH,
+                startX + Math.cos(radianAngle) * beamLength,
+                startY + Math.sin(radianAngle) * beamLength,
                 beamHitboxWidth
         );
-
     }
-
 }

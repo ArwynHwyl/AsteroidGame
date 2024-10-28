@@ -114,13 +114,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     private void updateGameObjects() {
         player.update();
-        if (player.shouldShowChargingEffect()) {
-            explosions.add(new Explosion(
-                    player.getEffectX(),
-                    player.getEffectY()
-            ));
-            player.resetChargingEffect();
-        }
+
         explosions.removeIf(explosion -> {
             explosion.update();
             return explosion.isFinished();

@@ -17,15 +17,12 @@ public class Boss extends Character {
     private int patternDuration;
     private List<Bullet> bullets;
     private static final int PATTERN_SWITCH_TIME = 300;
-    private static final double MOVEMENT_SPEED = 2.0;
     private static final int INITIAL_HEALTH = 100;
     private static final Logger logger = Logger.getLogger(Boss.class.getName());
 
     // Sprite-related constants
     private static final int SPRITE_ROWS = 2;
     private static final int SPRITE_COLS = 4;
-    private static final int SPRITE_WIDTH = 80;  // Adjust based on your sprite sheet
-    private static final int SPRITE_HEIGHT = 80; // Adjust based on your sprite sheet
 
     // Animation fields
     private BufferedImage spriteSheet;
@@ -37,7 +34,7 @@ public class Boss extends Character {
     private boolean isMoving = true;
 
     // Constants for bullet patterns
-    private static final double SPIRAL_SPEED = 6.0;
+    private static final double SPIRAL_SPEED = 8.0;
     private static final double SPREAD_SPEED = 8.0;
     private static final double WAVE_SPEED = 7.0;
     private static final double CROSS_SPEED = 10.0;
@@ -46,8 +43,8 @@ public class Boss extends Character {
     private static final double ORBIT_SPEED = 0.02;   // ความเร็วในการวน
     private double orbitAngle = 0;                    // มุมปัจจุบันในการวน
     private PlayerShip target;                        // อ้างอิงถึงผู้เล่น
-    private static final double MIN_DISTANCE = 150.0; // ระยะห่างขั้นต่ำ
-    private static final double MAX_DISTANCE = 250.0; // ระยะห่างสูงสุด
+    private static final double MIN_DISTANCE = 200.0; // ระยะห่างขั้นต่ำ
+    private static final double MAX_DISTANCE = 300.0; // ระยะห่างสูงสุด
     private double currentDistance = ORBIT_RADIUS;
     public Boss(double x, double y,PlayerShip player) {
         super(x, y, 0, 0, 0, INITIAL_HEALTH);
@@ -66,15 +63,12 @@ public class Boss extends Character {
                 logger.log(Level.SEVERE, "Failed to load boss sprite sheet - file not found");
                 return;
             }
-
             // Log the actual dimensions of the loaded sprite sheet
             logger.log(Level.INFO, "Loaded sprite sheet dimensions: " +
                     spriteSheet.getWidth() + "x" + spriteSheet.getHeight());
-
             // Calculate sprite dimensions based on the actual sprite sheet size
             int actualSpriteWidth = spriteSheet.getWidth() / SPRITE_COLS;
             int actualSpriteHeight = spriteSheet.getHeight() / SPRITE_ROWS;
-
             logger.log(Level.INFO, "Individual sprite dimensions: " +
                     actualSpriteWidth + "x" + actualSpriteHeight);
 
