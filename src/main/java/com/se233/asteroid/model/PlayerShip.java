@@ -15,7 +15,7 @@ public class PlayerShip extends Character {
     private static final double ACCELERATION = 0.5;
     private boolean shooting;
     private List<Bullet> bullets;
-    private static final double MAX_VELOCITY = 3.0;
+    private static final double MAX_VELOCITY = 5.0;
     private static final Logger logger = Logger.getLogger(PlayerShip.class.getName());
     private boolean isMoving = false;
     // Sprite Ship fields
@@ -31,9 +31,10 @@ public class PlayerShip extends Character {
     private static final int SPRITE_HEIGHT = 80; // 320/4
     private static final int HORIZONTAL_ROW = 3; // Row for A/D movement
     private static final int VERTICAL_ROW = 2;   // Row for W/S movement
-
+    // Screen dimensions
+    private static final int SCREEN_WIDTH = 800;
+    private static final int SCREEN_HEIGHT = 600;
     // Sprite fields gunflash
-
     private static BufferedImage[] gunflashSprites;
     private static final int GUNFLASH_FRAMES = 4;
     private int currentGunflashFrame = -1; // -1 means no gunflash
@@ -49,6 +50,32 @@ public class PlayerShip extends Character {
     private static final float SHIELD_ROTATION = 0.05f;
     private float shieldAngle = 0;
     private MovementDirection currentDirection = MovementDirection.NONE;
+    // Beam laser fields
+    private boolean firingBeam = false;
+
+    private static final int BEAM_MAX_LENGTH = 800; // Screen width
+    private int beamCharge = 100; // Maximum beam charge
+    private static final int BEAM_RECHARGE_RATE = 1; // How fast the beam recharges
+    private static final int BEAM_CONSUMPTION_RATE = 2; // How fast the beam uses charge
+    private boolean canFireBeam = true;
+    private static final int BEAM_SPRITE_COLUMNS = 8;
+    private int currentBeamPhase = -1; // -1 = ไม่ทำอะไร, 0-2 = เฟสการชาร์จ
+    private static final int BEAM_SPAWN_DISTANCE = SPRITE_HEIGHT/2 + 46;
+    private int chargeTick = 0;
+    private boolean isCharging = false;
+    private boolean showChargingEffect = false;
+    private double effectX, effectY;
+    private BufferedImage[][] beamSprites; // เปลี่ยนเป็น 2D array
+    private static final int CHARGE_DELAY = 8;
+    private static final int BEAM_WIDTH = 40;
+    private int currentBeamRow = 0;
+    private int currentBeamCol = 0;
+    private static final int SPRITE_SHEET_WIDTH = 320;
+    private static final int SPRITE_SHEET_HEIGHT = 290;
+    private static final int BEAM_SPRITE_ROWS = 4;
+    private static final int BEAM_SPRITE_COLS = 2;
+    private static final int SINGLE_SPRITE_WIDTH = 160;  // Sprite width
+    private static final int SINGLE_SPRITE_HEIGHT = 72; // 290/4 (ปัดลง)
 
     private enum MovementDirection {
         HORIZONTAL,
@@ -95,6 +122,7 @@ public class PlayerShip extends Character {
         super(x, y, 0, 0, 0, 100);
         bullets = new ArrayList<>();
         loadSpriteSheet();
+        loadBeamSprites();
     }
 
     private void loadSpriteSheet() {
@@ -155,13 +183,12 @@ public class PlayerShip extends Character {
             if (invincibleTicks <= 0) {
                 isInvincible = false;
             }
-            // อัปเดตมุมของ shield effect
             shieldAngle += SHIELD_ROTATION;
         }
 
-        // อัปเดตการเคลื่อนที่ของยาน
-        x += velocityX;
-        y += velocityY;
+        // อัปเดตการเคลื่อนที่ของยานและ screen wrapping
+        move(); // This calls the parent's move() which includes screenWrap()
+
         velocityX *= DECELERATION;
         velocityY *= DECELERATION;
         isMoving = Math.abs(velocityX) > 0.01 || Math.abs(velocityY) > 0.01;
@@ -173,8 +200,34 @@ public class PlayerShip extends Character {
         for (int i = bullets.size() - 1; i >= 0; i--) {
             Bullet bullet = bullets.get(i);
             bullet.update();
-            if (bullet.isOffScreen(800, 600)) {
+            if (bullet.isOffScreen(SCREEN_WIDTH, SCREEN_HEIGHT)) {
                 bullets.remove(i);
+            }
+        }
+        if (!firingBeam && beamCharge < 100) {
+            beamCharge += BEAM_RECHARGE_RATE;
+            if (beamCharge >= 100) {
+                canFireBeam = true;
+            }
+        }
+        if (firingBeam) {
+            beamCharge -= BEAM_CONSUMPTION_RATE;
+            if (beamCharge <= 0) {
+                firingBeam = false;
+                canFireBeam = false;
+            }
+        }
+        if (isCharging) {
+            chargeTick++;
+            if (chargeTick >= CHARGE_DELAY) {
+                chargeTick = 0;
+                currentBeamPhase++;
+
+                if (currentBeamPhase >= BEAM_SPRITE_COLUMNS - 1) {
+                    isCharging = false;
+                    firingBeam = true;
+                    currentBeamPhase = -1;
+                }
             }
         }
     }
@@ -183,6 +236,9 @@ public class PlayerShip extends Character {
         // Draw shield effect when invincible
         if (isInvincible) {
             drawShieldEffect(g);
+        }
+        if (firingBeam) {
+            drawBeam(g);
         }
 
         // Draw ship with blinking effect when invincible
@@ -232,7 +288,127 @@ public class PlayerShip extends Character {
         // Draw all bullets
         for (Bullet bullet : bullets) {
             bullet.draw(g);
+        }drawBeamChargeBar(g);
+    }
+    private void loadBeamSprites() {
+        try {
+            BufferedImage beamSheet = ImageIO.read(getClass().getResource("/assets/beam.png"));
+            beamSprites = new BufferedImage[BEAM_SPRITE_ROWS][BEAM_SPRITE_COLS];
+
+            // Load sprites in a 4x2 grid
+            for (int row = 0; row < BEAM_SPRITE_ROWS; row++) {
+                for (int col = 0; col < BEAM_SPRITE_COLS; col++) {
+                    beamSprites[row][col] = beamSheet.getSubimage(
+                            col * SINGLE_SPRITE_WIDTH,   // x coordinate
+                            row * SINGLE_SPRITE_HEIGHT,  // y coordinate
+                            SINGLE_SPRITE_WIDTH,         // width
+                            SINGLE_SPRITE_HEIGHT         // height
+                    );
+                }
+            }
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to load beam sprites", e);
         }
+    }
+
+    private void drawBeam(Graphics2D g) {
+        if (!isCharging && !firingBeam) return;
+
+        double radianAngle = Math.toRadians(angle - 90);
+        AffineTransform old = g.getTransform();
+
+        // Calculate beam start position to match gunflash
+        int startX = (int)(x + BEAM_SPAWN_DISTANCE * Math.cos(radianAngle));
+        int startY = (int)(y + BEAM_SPAWN_DISTANCE * Math.sin(radianAngle));
+
+        g.translate(startX, startY);
+        g.rotate(radianAngle);
+
+        if (beamSprites != null) {
+            if (firingBeam) {
+                // Draw beam head sprite
+                BufferedImage headSprite = beamSprites[0][0];
+                int headWidth = SINGLE_SPRITE_WIDTH;
+                int headHeight = SINGLE_SPRITE_HEIGHT;
+                g.drawImage(headSprite,
+                        -headWidth/2,
+                        -headHeight/2,
+                        headWidth,
+                        headHeight,
+                        null);
+            } else if (isCharging) {
+                // Draw charging animation
+                BufferedImage chargeSprite = beamSprites[currentBeamRow][currentBeamCol];
+                int chargeWidth = SINGLE_SPRITE_WIDTH;
+                int chargeHeight = SINGLE_SPRITE_HEIGHT;
+                g.drawImage(chargeSprite,
+                        -chargeWidth/2,
+                        -chargeHeight/2,
+                        chargeWidth,
+                        chargeHeight,
+                        null);
+            }
+        }
+
+        g.setTransform(old);
+    }
+    private void drawBeamChargeBar(Graphics2D g) {
+        int barWidth = 100;
+        int barHeight = 10;
+        int x = 20;
+        int y = 80;
+
+        // Draw background
+        g.setColor(new Color(50, 50, 50, 180));
+        g.fillRect(x, y, barWidth, barHeight);
+
+        // Draw charge level
+        if (beamCharge >= 30) {
+            g.setColor(new Color(0, 255, 255, 180));
+        } else {
+            g.setColor(new Color(255, 0, 0, 180));
+        }
+        g.fillRect(x, y, (int)((beamCharge/100.0) * barWidth), barHeight);
+
+        // Draw border
+        g.setColor(Color.WHITE);
+        g.drawRect(x, y, barWidth, barHeight);
+    }
+    public Rectangle getBeamBounds() {
+        if (!firingBeam) return null;
+
+        double radianAngle = Math.toRadians(angle - 90);
+        int startX = (int)x;
+        int startY = (int)y;
+        int endX = startX + (int)(Math.cos(radianAngle) * BEAM_MAX_LENGTH);
+        int endY = startY + (int)(Math.sin(radianAngle) * BEAM_MAX_LENGTH);
+
+        // สร้าง hitbox ที่มีขนาดเท่ากับ beam ที่เห็นจริง
+        // ใช้ BEAM_WIDTH/3 เพราะเป็นขนาดของ beam core ที่เราวาดจริง
+        int beamHitboxWidth = BEAM_WIDTH/3;
+
+        return new Rectangle(
+                Math.min(startX, endX) - beamHitboxWidth/2,
+                Math.min(startY, endY) - beamHitboxWidth/2,
+                Math.abs(endX - startX) + beamHitboxWidth,
+                Math.abs(endY - startY) + beamHitboxWidth
+        );}
+
+    public void setBeamFiring(boolean firing) {
+        if (firing && canFireBeam && beamCharge > 0 && !isCharging && !firingBeam) {
+            isCharging = true;
+            currentBeamRow = 0;
+            currentBeamCol = 0;
+            chargeTick = 0;
+        } else if (!firing) {
+            isCharging = false;
+            firingBeam = false;
+            currentBeamRow = 0;
+            currentBeamCol = 0;
+        }}
+
+    public boolean isBeamFiring() {
+        return firingBeam;
     }
     private void drawShieldEffect(Graphics2D g) {
         int shieldSize = 60;
@@ -346,8 +522,6 @@ public class PlayerShip extends Character {
             double bulletSpawnY = y + spawnDistance * Math.sin(radianCurrentAngle);
             bullets.add(new Bullet(bulletSpawnX, bulletSpawnY, currentAngle));
         }
-
-        System.out.println("Pew! Pew!");
     }
 
     private void limitVelocity() {
@@ -404,4 +578,137 @@ public class PlayerShip extends Character {
     public boolean isInvincible() {
         return isInvincible;
     }
+    @Override
+    protected void screenWrap() {
+        // Screen wrapping logic with smooth transition
+        if (x < -SPRITE_WIDTH/2) {
+            x = SCREEN_WIDTH + SPRITE_WIDTH/2;
+        } else if (x > SCREEN_WIDTH + SPRITE_WIDTH/2) {
+            x = -SPRITE_WIDTH/2;
+        }
+
+        if (y < -SPRITE_HEIGHT/2) {
+            y = SCREEN_HEIGHT + SPRITE_HEIGHT/2;
+        } else if (y > SCREEN_HEIGHT + SPRITE_HEIGHT/2) {
+            y = -SPRITE_HEIGHT/2;
+        }
+    }
+    private void updateBeamCharging() {
+        if (isCharging) {
+            chargeTick++;
+            if (chargeTick >= CHARGE_DELAY) {
+                chargeTick = 0;
+
+                // Update animation using Z pattern
+                if (currentBeamCol < BEAM_SPRITE_COLS - 1) {
+                    currentBeamCol++;
+                } else {
+                    currentBeamCol = 0;
+                    currentBeamRow++;
+                }
+
+                // Check if animation is complete
+                if (currentBeamRow >= BEAM_SPRITE_ROWS) {
+                    isCharging = false;
+                    firingBeam = true;
+                    currentBeamRow = 0;
+                    currentBeamCol = 0;
+
+                    // Store position for effect
+                    double radianAngle = Math.toRadians(angle - 90);
+                    effectX = x + BEAM_SPAWN_DISTANCE * Math.cos(radianAngle);
+                    effectY = y + BEAM_SPAWN_DISTANCE * Math.sin(radianAngle);
+                    showChargingEffect = true;
+                }
+            }
+        }
+    }
+    public boolean shouldShowChargingEffect() {
+        return showChargingEffect;
+    }
+
+    // เพิ่มเมธอดสำหรับดึงตำแหน่ง effect
+    public double getEffectX() {
+        return effectX;
+    }
+
+    public double getEffectY() {
+        return effectY;
+    }
+
+    // เพิ่มเมธอดสำหรับรีเซ็ต effect flag
+    public void resetChargingEffect() {
+        showChargingEffect = false;
+    }
+
+    public class BeamHitbox {
+        private double startX, startY;
+        private double endX, endY;
+        private double width;
+
+        public BeamHitbox(double startX, double startY, double endX, double endY, double width) {
+            this.startX = startX;
+            this.startY = startY;
+            this.endX = endX;
+            this.endY = endY;
+            this.width = width;
+        }
+
+        public boolean intersects(Rectangle target) {
+            // Calculate beam direction vector
+            double dx = endX - startX;
+            double dy = endY - startY;
+            double length = Math.sqrt(dx * dx + dy * dy);
+
+            if (length == 0) return false;
+
+            // Normalize direction vector
+            dx /= length;
+            dy /= length;
+
+            // Calculate vector to target center
+            double targetCenterX = target.getCenterX();
+            double targetCenterY = target.getCenterY();
+
+            // Vector from beam start to target center
+            double vx = targetCenterX - startX;
+            double vy = targetCenterY - startY;
+
+            // Project target center onto beam line
+            double projection = vx * dx + vy * dy;
+
+            // Find closest point on beam line to target center
+            double closestX = startX + Math.max(0, Math.min(length, projection)) * dx;
+            double closestY = startY + Math.max(0, Math.min(length, projection)) * dy;
+
+            // Check if closest point is within target bounds plus beam width
+            double distance = Math.sqrt(
+                    Math.pow(closestX - targetCenterX, 2) +
+                            Math.pow(closestY - targetCenterY, 2)
+            );
+
+            return distance < (width/2 + Math.max(target.width, target.height)/2);
+        }
+    }
+
+    public BeamHitbox getBeamHitbox() {
+        if (!firingBeam) return null;
+
+        double radianAngle = Math.toRadians(angle - 90);
+        double beamHitboxWidth = BEAM_WIDTH/4;
+
+        // Use updated BEAM_SPAWN_DISTANCE for hitbox calculation
+        double startX = x + BEAM_SPAWN_DISTANCE * Math.cos(radianAngle);
+        double startY = y + BEAM_SPAWN_DISTANCE * Math.sin(radianAngle);
+
+        return new BeamHitbox(
+                startX,
+                startY,
+                startX + Math.cos(radianAngle) * BEAM_MAX_LENGTH,
+                startY + Math.sin(radianAngle) * BEAM_MAX_LENGTH,
+                beamHitboxWidth
+        );
+
+    }
+
 }

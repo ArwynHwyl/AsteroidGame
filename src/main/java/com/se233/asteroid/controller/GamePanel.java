@@ -46,6 +46,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         setFocusable(true);
         addKeyListener(this);
 
+
         // Mouse controls for rotation
         addMouseListener(new MouseAdapter() {
             @Override
@@ -113,6 +114,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     private void updateGameObjects() {
         player.update();
+        if (player.shouldShowChargingEffect()) {
+            explosions.add(new Explosion(
+                    player.getEffectX(),
+                    player.getEffectY()
+            ));
+            player.resetChargingEffect();
+        }
         explosions.removeIf(explosion -> {
             explosion.update();
             return explosion.isFinished();
@@ -186,6 +194,63 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                     if (bullet.getBounds().intersects(playerBounds)) {
                         startExplosion();
                         return;
+                    }
+                }
+            }
+        }if (isExploding) return;
+
+        // Check beam collisions if beam is active
+        if (player.isBeamFiring()) {
+            PlayerShip.BeamHitbox beamHitbox = player.getBeamHitbox();
+            if (beamHitbox != null) {
+                // Check beam collision with asteroids
+                for (int i = asteroids.size() - 1; i >= 0; i--) {
+                    Asteroid asteroid = asteroids.get(i);
+                    if (beamHitbox.intersects(asteroid.getBounds())) {
+                        explosions.add(new Explosion(asteroid.getX(), asteroid.getY()));
+                        asteroid.hit();
+                        if (asteroid.isDestroyed()) {
+                            score += asteroid.isLarge() ? 2 : 1;
+                            asteroids.remove(i);
+                        }
+                    }
+                }
+
+                // Check beam collision with regular enemies
+                for (int i = regularEnemies.size() - 1; i >= 0; i--) {
+                    RegularEnemy enemy = regularEnemies.get(i);
+                    if (beamHitbox.intersects(enemy.getBounds())) {
+                        explosions.add(new Explosion(enemy.getX(), enemy.getY()));
+                        enemy.hit();
+                        if (enemy.isDestroyed()) {
+                            score += 1;
+                            regularEnemies.remove(i);
+                        }
+                    }
+                }
+
+                // Check beam collision with second tier enemies
+                for (int i = secondTierEnemies.size() - 1; i >= 0; i--) {
+                    SecondTier enemy = secondTierEnemies.get(i);
+                    if (beamHitbox.intersects(enemy.getBounds())) {
+                        explosions.add(new Explosion(enemy.getX(), enemy.getY()));
+                        enemy.hit();
+                        if (enemy.isDestroyed()) {
+                            score += 2;
+                            secondTierEnemies.remove(i);
+                        }
+                    }
+                }
+
+                // Check beam collision with boss
+                if (boss != null && boss.isAlive() && beamHitbox.intersects(boss.getBounds())) {
+                    explosions.add(new Explosion(boss.getX(), boss.getY()));
+                    boss.hit(5);
+                    if (!boss.isAlive()) {
+                        score += 50;
+                        bossDefeated = true;
+                        gameSucceeded = true;
+                        gameSucceedMessage += score;
                     }
                 }
             }
@@ -407,6 +472,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             if (e.getKeyCode() == KeyEvent.VK_E) {
                 player.setUltimateShooting(true);
             }
+            if (e.getKeyCode() == KeyEvent.VK_Q) {
+                player.setBeamFiring(true);
+            }
         }
     }
 
@@ -418,6 +486,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         }
         if (e.getKeyCode() == KeyEvent.VK_E) {
             player.setUltimateShooting(false);
+        }
+        if (e.getKeyCode() == KeyEvent.VK_Q) {
+            player.setBeamFiring(false);
         }
     }
 

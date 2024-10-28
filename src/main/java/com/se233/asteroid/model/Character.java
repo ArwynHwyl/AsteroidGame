@@ -16,8 +16,24 @@ abstract class Character {
         this.angle = angle;
         this.health = health;
     }
-
-
+    public void move() {
+        x += velocityX;
+        y += velocityY;
+        screenWrap();
+    }
+    protected void screenWrap() {
+        // Screen wrapping logic
+        if (x < 0) x = 800; // Assuming 800x600 screen size
+        if (x > 800) x = 0;
+        if (y < 0) y = 600;
+        if (y > 600) y = 0;
+    }
+    public double getX() {
+        return x;
+    }
+    public double getY() {
+        return y;
+    }
     public abstract void draw(Graphics2D g);
 
     public abstract void update(); // Abstract update logic specific to each character type
