@@ -104,24 +104,33 @@ public class SecondTier extends Character {
         x += velocityX;
         y += velocityY;
 
-        // Wrap around screen
-        if (x < -30) x = 830;
-        if (x > 830) x = -30;
-        if (y < -30) y = 630;
-        if (y > 630) y = -30;
+        // เปลี่ยนจาก wrap เป็น bounce
+        if (x - 30 <= 0) {
+            x = 30;
+            velocityX = Math.abs(velocityX);
+        } else if (x + 30 >= 800) {
+            x = 800 - 30;
+            velocityX = -Math.abs(velocityX);
+        }
 
-        // Update shooting cooldown
+        if (y - 30 <= 0) {
+            y = 30;
+            velocityY = Math.abs(velocityY);
+        } else if (y + 30 >= 600) {
+            y = 600 - 30;
+            velocityY = -Math.abs(velocityY);
+        }
+
+        // ส่วนที่เหลือของ update() คงเดิม
         if (currentCooldown > 0) {
             currentCooldown--;
         }
 
-        // ยิงเมื่อ cooldown หมด
         if (target != null && currentCooldown <= 0) {
             shoot();
             currentCooldown = SHOOT_COOLDOWN;
         }
 
-        // Update bullets
         for (int i = bullets.size() - 1; i >= 0; i--) {
             Bullet bullet = bullets.get(i);
             bullet.update();
@@ -130,7 +139,6 @@ public class SecondTier extends Character {
             }
         }
 
-        // หันไปทางเป้าหมาย
         if (target != null) {
             double dx = target.getX() - x;
             double dy = target.getY() - y;

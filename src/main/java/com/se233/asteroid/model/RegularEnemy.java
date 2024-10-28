@@ -48,12 +48,24 @@ public class RegularEnemy extends Character {
         x += velocityX;
         y += velocityY;
 
-        // ปรับขอบเขตการ wrap around
-        if (x < -SHIP_WIDTH/2) x = 800 + SHIP_WIDTH/2;
-        if (x > 800 + SHIP_WIDTH/2) x = -SHIP_WIDTH/2;
-        if (y < -SHIP_HEIGHT/2) y = 600 + SHIP_HEIGHT/2;
-        if (y > 600 + SHIP_HEIGHT/2) y = -SHIP_HEIGHT/2;
+        // เปลี่ยนจาก wrap เป็น bounce
+        if (x - SHIP_WIDTH/2 <= 0) {
+            x = SHIP_WIDTH/2;
+            velocityX = Math.abs(velocityX); // เด้งไปทางขวา
+        } else if (x + SHIP_WIDTH/2 >= 800) {
+            x = 800 - SHIP_WIDTH/2;
+            velocityX = -Math.abs(velocityX); // เด้งไปทางซ้าย
+        }
 
+        if (y - SHIP_HEIGHT/2 <= 0) {
+            y = SHIP_HEIGHT/2;
+            velocityY = Math.abs(velocityY); // เด้งลงล่าง
+        } else if (y + SHIP_HEIGHT/2 >= 600) {
+            y = 600 - SHIP_HEIGHT/2;
+            velocityY = -Math.abs(velocityY); // เด้งขึ้นบน
+        }
+
+        // ส่วนที่เหลือของ update() คงเดิม
         if (currentCooldown > 0) {
             currentCooldown--;
         }

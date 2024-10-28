@@ -14,7 +14,7 @@ public class Bullet {
     private double angle;
     private double velocityX;
     private double velocityY;
-    private double speed = 2;
+    private double speed = 4;
 
     // Static bullet sprite
     private static BufferedImage bulletSprite;

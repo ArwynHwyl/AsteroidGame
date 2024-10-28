@@ -12,13 +12,17 @@ public class Asteroid extends Character {
     private double rotationSpeed;
     private BufferedImage asteroidImage;
 
-    // กำหนดขนาดความกว้างและความสูงแยกกัน
-    private static final int LARGE_WIDTH = 170;  // เพิ่มความกว้าง
-    private static final int LARGE_HEIGHT = 120; // คงความสูงไว้
-    private static final int SMALL_WIDTH = 140;  // เพิ่มความกว้าง
-    private static final int SMALL_HEIGHT = 100; // คงความสูงไว้
+    // ขนาดต่างๆ คงเดิม
+    private static final int LARGE_WIDTH = 170;
+    private static final int LARGE_HEIGHT = 120;
+    private static final int SMALL_WIDTH = 140;
+    private static final int SMALL_HEIGHT = 100;
     private static final int LARGE_HITBOX = 90;
     private static final int SMALL_HITBOX = 70;
+
+    // เพิ่มค่าคงที่สำหรับขอบเขตหน้าจอ
+    private static final int SCREEN_WIDTH = 800;
+    private static final int SCREEN_HEIGHT = 600;
 
     public Asteroid(double x, double y, boolean isLarge) {
         super(x, y,
@@ -36,7 +40,6 @@ public class Asteroid extends Character {
             ImageIcon icon = new ImageIcon(getClass().getResource("/assets/asteroid.png"));
             Image originalImage = icon.getImage();
 
-            // กำหนดขนาดตามความกว้างและความสูงที่ต้องการ
             int width = isLarge ? LARGE_WIDTH : SMALL_WIDTH;
             int height = isLarge ? LARGE_HEIGHT : SMALL_HEIGHT;
 
@@ -44,11 +47,9 @@ public class Asteroid extends Character {
             Graphics2D g2d = asteroidImage.createGraphics();
             g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
-            // คำนวณขนาดและตำแหน่งเพื่อให้รูปไม่ผิดสัดส่วน
             int drawWidth = width;
             int drawHeight = height;
 
-            // วาดรูปให้เต็มพื้นที่ที่กำหนด
             g2d.drawImage(originalImage, 0, 0, drawWidth, drawHeight, null);
             g2d.dispose();
         } catch (Exception e) {
@@ -58,40 +59,64 @@ public class Asteroid extends Character {
 
     @Override
     public void update() {
+        // อัปเดตตำแหน่ง
         x += velocityX;
         y += velocityY;
+
+        // อัปเดตการหมุน
         rotationAngle += rotationSpeed;
 
-        // ปรับขอบเขตการ wrap around ตามขนาดความกว้าง
+        // ตรวจสอบและจัดการการชนขอบ
+        handleScreenBounce();
+    }
+
+    private void handleScreenBounce() {
         int boundWidth = isLarge ? LARGE_WIDTH : SMALL_WIDTH;
         int boundHeight = isLarge ? LARGE_HEIGHT : SMALL_HEIGHT;
+        boolean bounced = false;
 
-        if (x < -boundWidth) x = 840 + boundWidth/2;
-        if (x > 840 + boundWidth/2) x = -boundWidth;
-        if (y < -boundHeight) y = 640 + boundHeight/2;
-        if (y > 640 + boundHeight/2) y = -boundHeight;
+        // ตรวจสอบการชนขอบซ้าย-ขวา
+        if (x - boundWidth/2 <= 0) {
+            x = boundWidth/2;
+            velocityX = Math.abs(velocityX); // เด้งไปทางขวา
+            bounced = true;
+        } else if (x + boundWidth/2 >= SCREEN_WIDTH) {
+            x = SCREEN_WIDTH - boundWidth/2;
+            velocityX = -Math.abs(velocityX); // เด้งไปทางซ้าย
+            bounced = true;
+        }
+
+        // ตรวจสอบการชนขอบบน-ล่าง
+        if (y - boundHeight/2 <= 0) {
+            y = boundHeight/2;
+            velocityY = Math.abs(velocityY); // เด้งลงล่าง
+            bounced = true;
+        } else if (y + boundHeight/2 >= SCREEN_HEIGHT) {
+            y = SCREEN_HEIGHT - boundHeight/2;
+            velocityY = -Math.abs(velocityY); // เด้งขึ้นบน
+            bounced = true;
+        }
+
+        // เพิ่มเอฟเฟกต์เมื่อชนขอบ (เปลี่ยนความเร็วการหมุนเล็กน้อย)
+        if (bounced) {
+            rotationSpeed = Math.random() * 2 - 1;  // สุ่มความเร็วการหมุนใหม่เมื่อชนขอบ
+        }
     }
 
     @Override
     public void draw(Graphics2D g) {
         if (asteroidImage != null) {
             AffineTransform transform = new AffineTransform();
-            // ปรับตำแหน่งการวาดรูปให้อยู่ตรงกลาง
             transform.translate(x - asteroidImage.getWidth()/2, y - asteroidImage.getHeight()/2);
             transform.rotate(Math.toRadians(rotationAngle), asteroidImage.getWidth()/2, asteroidImage.getHeight()/2);
             g.drawImage(asteroidImage, transform, null);
-
-            // Debug: แสดง hitbox (ถ้าต้องการดู)
-            // Rectangle bounds = getBounds();
-            // g.setColor(Color.RED);
-            // g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
 
         drawHealthBar(g);
     }
 
     private void drawHealthBar(Graphics2D g) {
-        int healthBarWidth = isLarge ? 120 : 80; // ปรับความกว้างของ health bar
+        int healthBarWidth = isLarge ? 120 : 80;
         int healthBarHeight = 6;
         int currentHealthWidth = (int)((health / (double)maxHealth) * healthBarWidth);
         int yOffset = isLarge ? LARGE_HEIGHT/2 + 15 : SMALL_HEIGHT/2 + 15;

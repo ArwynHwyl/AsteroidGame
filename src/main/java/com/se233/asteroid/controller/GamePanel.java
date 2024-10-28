@@ -154,7 +154,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     private void startBossPhase() {
         bossPhaseStarted = true;
         boss = new Boss(400, 300);
-        // You could add dramatic effects or messages here
     }
 
     private void checkCollisions() {
@@ -417,16 +416,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     public void mouseMoved(MouseEvent e) {}
 
     private void spawnAsteroids() {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 0; i++) {
             asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, true));
         }
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 0; i++) {
             asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, false));
         }
     }
 
     private void spawnRegularEnemies() {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 0; i++) {
             double x = Math.random() * 800;
             double y = Math.random() * 600;
             double velocityX = Math.random() * 2 - 1;
@@ -438,7 +437,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     }
 
     private void spawnSecondTierEnemies() {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 1; i++) {
             double x = Math.random() * 800;
             double y = Math.random() * 600;
             double velocityX = Math.random() * 2 - 1;

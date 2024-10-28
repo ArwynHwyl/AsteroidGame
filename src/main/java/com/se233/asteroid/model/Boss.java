@@ -11,7 +11,7 @@ public class Boss extends Character {
     private List<Bullet> bullets;
     private static final int PATTERN_SWITCH_TIME = 300;
     private static final double MOVEMENT_SPEED = 2.0;
-    private static final int INITIAL_HEALTH = 1000;
+    private static final int INITIAL_HEALTH = 100;
 
     // Constants for bullet patterns
     private static final double SPIRAL_SPEED = 6.0;
@@ -39,11 +39,32 @@ public class Boss extends Character {
         patternDuration++;
         double t = patternDuration * 0.02;
 
-        // Complex movement pattern combining circular and figure-8
+        // คำนวณความเร็วใหม่
         velocityX = Math.cos(t) * MOVEMENT_SPEED * Math.sin(t * 0.5);
         velocityY = Math.sin(t) * MOVEMENT_SPEED * Math.cos(t * 0.5);
 
-        move();
+        // เพิ่มการเด้งที่ขอบ
+        x += velocityX;
+        y += velocityY;
+
+        // บอสมีขนาด 80x80 (จากการวาดในเมธอด draw)
+        if (x - 40 <= 0) {
+            x = 40;
+            velocityX = Math.abs(velocityX);
+        } else if (x + 40 >= 800) {
+            x = 800 - 40;
+            velocityX = -Math.abs(velocityX);
+        }
+
+        if (y - 40 <= 0) {
+            y = 40;
+            velocityY = Math.abs(velocityY);
+        } else if (y + 40 >= 600) {
+            y = 600 - 40;
+            velocityY = -Math.abs(velocityY);
+        }
+
+        // อัปเดตมุมตามทิศทางการเคลื่อนที่
         angle = Math.toDegrees(Math.atan2(velocityY, velocityX));
     }
 
