@@ -1,4 +1,4 @@
-package com.se233.asteroid.test;
+package com.se233.asteroid;
 import com.se233.asteroid.controller.GamePanel;
 import com.se233.asteroid.model.*;
 import org.junit.jupiter.api.*;

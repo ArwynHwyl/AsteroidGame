@@ -207,7 +207,6 @@ public  class BossTest {
                             Math.pow(boss.getY() - target.getY(), 2)
             );
 
-
             // Check if boss has moved from its starting position
             assertFalse(
                     startX == boss.getX() && startY == boss.getY(),

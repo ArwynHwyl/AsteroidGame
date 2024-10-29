@@ -1,4 +1,4 @@
-package com.se233.asteroid.test;
+package com.se233.asteroid;
 
 import com.se233.asteroid.model.PlayerShip;
 import com.se233.asteroid.model.RegularEnemy;
