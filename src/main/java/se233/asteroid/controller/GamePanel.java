@@ -3,6 +3,7 @@ package se233.asteroid.controller;
 import se233.asteroid.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import se233.asteroid.util.GameException;
 
 
 import javax.swing.*;
@@ -52,9 +53,22 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(800, 600));
-        setupInitialState();
-        timer = new Timer(16, this); // 60 FPS
-        timer.start();
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            handleGlobalException(throwable);
+        });
+
+        try {
+            setupInitialState();
+            timer = new Timer(16, this);
+            timer.start();
+            // Add input listeners
+            addMouseListener(this);
+            addMouseMotionListener(this);
+            setFocusable(true);
+            addKeyListener(this);
+        } catch (Exception e) {
+            handleGlobalException(e);
+        }
 
         // Add input listeners
         addMouseListener(this);
@@ -726,5 +740,132 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             enemy.setTarget(player);
             secondTierEnemies.add(enemy);
         }
+    }
+    /**
+     * centralize Exception
+     * catch every Throwable exceotion convert to  GameException
+     */
+    private void handleGlobalException(Throwable t) {
+        try {
+            GameException gameException;
+            if (t instanceof GameException) {
+                gameException = (GameException) t;
+            } else {
+                // แปลง unknown exception เป็น GameException
+                gameException = new GameException(
+                        "Unexpected error: " + t.getMessage(),
+                        GameException.ErrorType.GENERAL_ERROR,
+                        t
+                );
+            }
+            handleGameException(gameException);
+        } catch (Exception unexpected) {
+            // ถ้าเกิด error ในตัว handler เอง
+            logger.fatal("Critical error in exception handler", unexpected);
+            showFatalErrorDialog();
+            System.exit(1);
+        }
+    }
+    /**
+     * จัดการ GameException แต่ละประเภทและทำการกู้คืนที่เหมาะสม
+     */
+    private void handleGameException(GameException e) {
+        switch (e.getErrorType()) {
+            case RESOURCE_LOADING_ERROR:
+                logger.error("Resource loading error: {}", e.getMessage(), e);
+                handleResourceError(e);
+                break;
+
+            case SPRITE_PROCESSING_ERROR:
+                logger.error("Sprite processing error: {}", e.getMessage(), e);
+                handleSpriteError(e);
+                break;
+
+            case GENERAL_ERROR:
+                logger.error("General game error: {}", e.getMessage(), e);
+                handleGeneralError(e);
+                break;
+
+            default:
+                logger.error("Unknown error type: {}", e.getMessage(), e);
+                handleGeneralError(e);
+                break;
+        }
+    }
+    /**
+     * จัดการ error ที่เกี่ยวกับการโหลดทรัพยากร
+     */
+    private void handleResourceError(GameException e) {
+        showErrorDialog(
+                "Resource Error",
+                "Failed to load game resources. The game will try to reload."
+        );
+        try {
+            // พยายามโหลดทรัพยากรใหม่
+            setupInitialState();
+        } catch (Exception retryError) {
+            // ถ้ายังไม่สำเร็จ ให้จบการทำงาน
+            showFatalErrorDialog();
+            System.exit(1);
+        }}
+    /**
+     * จัดการ error ที่เกี่ยวกับการประมวลผล sprite
+     */
+    private void handleSpriteError(GameException e) {
+        showErrorDialog(
+                "Graphics Error",
+                "Error processing game graphics. The game will try to recover."
+        );
+        try {
+            // พยายามโหลด sprite ใหม่
+            if (player != null) {
+                player = new PlayerShip(player.getX(), player.getY());
+            }
+        } catch (Exception retryError) {
+            handleGeneralError(retryError);
+        }
+    }
+
+    /**
+     * จัดการ error ทั่วไป
+     */
+    private void handleGeneralError(Exception e) {
+        showErrorDialog(
+                "Game Error",
+                "An error occurred. The game will restart."
+        );
+        try {
+            initializeGame();
+        } catch (Exception retryError) {
+            showFatalErrorDialog();
+            System.exit(1);
+        }
+    }
+    /**
+     * แสดง dialog แจ้ง error แบบทั่วไป
+     */
+    private void showErrorDialog(String title, String message) {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(
+                    this,
+                    message,
+                    title,
+                    JOptionPane.ERROR_MESSAGE
+            );
+        });
+    }
+
+    /**
+     * แสดง dialog แจ้ง error ร้ายแรง
+     */
+    private void showFatalErrorDialog() {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "A fatal error occurred. The game will close.",
+                    "Fatal Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        });
     }
 }

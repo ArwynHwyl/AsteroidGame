@@ -10,7 +10,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import se233.asteroid.util.ExceptionHandler;
+import se233.asteroid.util.GameException;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Logger;
+import se233.asteroid.util.ResourceLoader;
 
 public class PlayerShip extends Character {
     private static final double DECELERATION = 0.98;
@@ -83,28 +88,14 @@ public class PlayerShip extends Character {
 
     private static void loadGunflashSprites() {
         try {
-            // เปลี่ยนชื่อไฟล์ให้ตรงกับที่มีในโปรเจค
-            BufferedImage spriteSheet = ImageIO.read(PlayerShip.class.getResource("/assets/gunflash.png"));
-            gunflashSprites = new BufferedImage[GUNFLASH_FRAMES];
-
-            // ตรวจสอบว่าโหลด sprite สำเร็จ
-            if (spriteSheet == null) {
-                return;
-            }
-
-            int spriteWidth = spriteSheet.getWidth() / GUNFLASH_FRAMES;
-            int spriteHeight = spriteSheet.getHeight();
-
-            for (int i = 0; i < GUNFLASH_FRAMES; i++) {
-                gunflashSprites[i] = spriteSheet.getSubimage(
-                        i * spriteWidth,
-                        0,
-                        spriteWidth,
-                        spriteHeight
-                );
-            }
-        } catch (IOException e) {
-        } catch (Exception e) {
+            BufferedImage spriteSheet = ResourceLoader.loadImage("/assets/gunflash.png", "gunflash sprite sheet");
+            gunflashSprites = ResourceLoader.loadSpriteStrip(
+                    spriteSheet,
+                    GUNFLASH_FRAMES,
+                    "gunflash"
+            );
+        } catch (GameException e) {
+            ExceptionHandler.handleException(e);
         }
     }
 
@@ -118,23 +109,18 @@ public class PlayerShip extends Character {
 
     private void loadSpriteSheet() {
         try {
-            spriteSheet = ImageIO.read(getClass().getResource("/assets/ship.png"));
-            sprites = new BufferedImage[SPRITE_ROWS][SPRITE_COLS];
-
-            for (int row = 0; row < SPRITE_ROWS; row++) {
-                for (int col = 0; col < SPRITE_COLS; col++) {
-                    sprites[row][col] = spriteSheet.getSubimage(
-                            col * SPRITE_WIDTH,
-                            row * SPRITE_HEIGHT,
-                            SPRITE_WIDTH,
-                            SPRITE_HEIGHT
-                    );
-                }
-            }            logger.debug("Sprite sheet loaded successfully");
-
-        } catch (IOException e) {
-            logger.error("Failed to load sprite sheet", e);
-
+            spriteSheet = ResourceLoader.loadImage("/assets/ship.png", "ship sprite sheet");
+            sprites = ResourceLoader.loadSpriteGrid(
+                    spriteSheet,
+                    SPRITE_ROWS,
+                    SPRITE_COLS,
+                    SPRITE_WIDTH,
+                    SPRITE_HEIGHT,
+                    "ship"
+            );
+            logger.debug("Sprite sheet loaded successfully");
+        } catch (GameException e) {
+            ExceptionHandler.handleException(e);
         }
     }
 
@@ -280,21 +266,17 @@ public class PlayerShip extends Character {
     }
     private void loadBeamSprites() {
         try {
-            BufferedImage beamSheet = ImageIO.read(getClass().getResource("/assets/beam.png"));
-            beamSprites = new BufferedImage[BEAM_SPRITE_ROWS][BEAM_SPRITE_COLS];
-
-            // Load sprites in a 4x2 grid
-            for (int row = 0; row < BEAM_SPRITE_ROWS; row++) {
-                for (int col = 0; col < BEAM_SPRITE_COLS; col++) {
-                    beamSprites[row][col] = beamSheet.getSubimage(
-                            col * SINGLE_SPRITE_WIDTH,   // x coordinate
-                            row * SINGLE_SPRITE_HEIGHT,  // y coordinate
-                            SINGLE_SPRITE_WIDTH,         // width
-                            SINGLE_SPRITE_HEIGHT         // height
-                    );
-                }
-            }
-        } catch (IOException e) {
+            BufferedImage beamSheet = ResourceLoader.loadImage("/assets/beam.png", "beam sprite sheet");
+            beamSprites = ResourceLoader.loadSpriteGrid(
+                    beamSheet,
+                    BEAM_SPRITE_ROWS,
+                    BEAM_SPRITE_COLS,
+                    SINGLE_SPRITE_WIDTH,
+                    SINGLE_SPRITE_HEIGHT,
+                    "beam"
+            );
+        } catch (GameException e) {
+            ExceptionHandler.handleException(e);
         }
     }
 
@@ -662,4 +644,5 @@ public class PlayerShip extends Character {
                 beamHitboxWidth
         );
     }
+
 }
