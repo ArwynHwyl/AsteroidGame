@@ -1,6 +1,9 @@
 package com.se233.asteroid.controller;
 
 import com.se233.asteroid.model.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import java.util.logging.Level;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -37,8 +40,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     private boolean bossPhaseStarted = false;
     private boolean bossDefeated = false;
     //On win screen
-    private float endingAlpha = 0f; // ความโปร่งใสของเอฟเฟกต์
-    private Timer endingTimer; // Timer สำหรับ animation
+    private float endingAlpha = 0f;
+    private Timer endingTimer;
+
+    private static final Logger logger = LogManager.getLogger(GamePanel.class);
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(800, 600));
@@ -96,6 +101,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         isExploding = false;
     }
     private void initializeGame() {
+        score = 0;
+        logger.info("Game started. Score : 0");
         player = new PlayerShip(400, 300);
         player.setInvincible(true);
         asteroids = new ArrayList<>();
@@ -215,7 +222,6 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             }
         }
 
-        // ถ้าผู้เล่นกำลัง invincible ให้ข้ามการเช็คการชน
         if (!player.isInvincible()) {
             // Check enemy bullets with player
             checkEnemyCollisionsWithPlayer(playerBounds);
@@ -242,7 +248,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                         explosions.add(new Explosion(asteroid.getX(), asteroid.getY()));
                         asteroid.hit();
                         if (asteroid.isDestroyed()) {
+                            int points = asteroid.isLarge() ? 2 : 1;
                             score += asteroid.isLarge() ? 2 : 1;
+                            logger.info("Score increased by {} points - Asteroid destroyed by beam. Current score: {}",
+                                    points, score);
                             asteroids.remove(i);
                         }
                     }
@@ -256,6 +265,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                         enemy.hit();
                         if (enemy.isDestroyed()) {
                             score += 1;
+                            logger.info("Score increased by 1 point - Regular enemy destroyed By beam. Current score: {}",
+                                    score);
                             regularEnemies.remove(i);
                         }
                     }
@@ -269,6 +280,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                         enemy.hit();
                         if (enemy.isDestroyed()) {
                             score += 2;
+                            logger.info("Score increased by 2 point - Second-tier enemy destroyed by beam. Current score: {}",
+                                    score);
                             secondTierEnemies.remove(i);
                         }
                     }
@@ -280,6 +293,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                     boss.hit(5);
                     if (!boss.isAlive()) {
                         score += 50;
+                        logger.info("Score increased by 50 points - Boss defeated by beam! Final score: {}",
+                                score);
                         bossDefeated = true;
                         gameSucceeded = true;
                         gameOver = true;
@@ -298,7 +313,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 explosions.add(new Explosion(bullet.getX(), bullet.getY()));
                 asteroid.hit();
                 if (asteroid.isDestroyed()) {
+                    int points = asteroid.isLarge() ? 2 : 1;
                     score += asteroid.isLarge() ? 2 : 1;
+                    logger.info("Score increased by {} points - Asteroid destroyed. Current score: {}",
+                            points,score);
                     asteroids.remove(j);
                 }
                 return true;
@@ -313,6 +331,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 enemy.hit();
                 if (enemy.isDestroyed()) {
                     score += 1;
+                    logger.info("Score increased by 1 point - Regular enemy destroyed. Current score: {}",
+                            score);
                     regularEnemies.remove(j);
                 }
                 return true;
@@ -327,6 +347,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 enemy.hit();
                 if (enemy.isDestroyed()) {
                     score += 2;
+                    logger.info("Score increased by 2 points - Second tier enemy destroyed. Current score: {}",
+                            score);
                     secondTierEnemies.remove(j);
                 }
                 return true;
@@ -339,6 +361,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             boss.hit(10);
             if (!boss.isAlive()) {
                 score += 50;
+                logger.info("Score increased by 50 points - Boss defeated! Final score: {}",
+                        score);
                 bossDefeated = true;
                 gameSucceeded = true;
                 gameOver=true;
@@ -404,16 +428,19 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
             if (lives <= 0) {
                 gameOver = true;
+                logger.info("Game Over. Final score: {}", score);
                 gameOverMessage = "GAME OVER - Final Score: " + score;
             } else {
+                logger.info("Player lost a life. Lives remaining: {}", lives);
                 player = new PlayerShip(400, 300);
-                player.setInvincible(true);  // ตั้งค่าให้เป็นอมตะตอนเกิดใหม่
+                player.setInvincible(true);
                 if (boss != null) {
                     boss.setTarget(player);
                 }
             }
         }
     }
+
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -463,24 +490,20 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         }
     }
     private void drawStartMenu(Graphics2D g2d) {
-        // ตั้งค่าสไตล์ข้อความ
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("Arial", Font.BOLD, 50));
 
-        // วาดชื่อเกม
         String title = "ASTEROID SHOOTER";
         FontMetrics titleMetrics = g2d.getFontMetrics();
         int titleX = (getWidth() - titleMetrics.stringWidth(title)) / 2;
         g2d.drawString(title, titleX, getHeight() / 3);
 
-        // วาดข้อความแนะนำ
         g2d.setFont(new Font("Arial", Font.BOLD, 30));
         String startText = "Press 'T' to Start";
         FontMetrics startMetrics = g2d.getFontMetrics();
         int startX = (getWidth() - startMetrics.stringWidth(startText)) / 2;
         g2d.drawString(startText, startX, getHeight() / 2);
 
-        // วาดคำแนะนำการควบคุม
         g2d.setFont(new Font("Arial", Font.PLAIN, 20));
         String[] controls = {
                 "Controls:",

@@ -1,5 +1,7 @@
 package com.se233.asteroid.model;
 
+import org.apache.logging.log4j.LogManager;
+
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -7,9 +9,10 @@ import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 import java.util.logging.Level;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class PlayerShip extends Character {
     private static final double DECELERATION = 0.98;
@@ -17,7 +20,7 @@ public class PlayerShip extends Character {
     private boolean shooting;
     private List<Bullet> bullets;
     private static final double MAX_VELOCITY = 5.0;
-    private static final Logger logger = Logger.getLogger(PlayerShip.class.getName());
+    private static final Logger logger = LogManager.getLogger(PlayerShip.class);
     private boolean isMoving = false;
     // Sprite Ship fields
     private BufferedImage spriteSheet;
@@ -88,7 +91,6 @@ public class PlayerShip extends Character {
 
             // ตรวจสอบว่าโหลด sprite สำเร็จ
             if (spriteSheet == null) {
-                logger.log(Level.SEVERE, "Failed to load gunflash sprite sheet - file not found");
                 return;
             }
 
@@ -103,11 +105,8 @@ public class PlayerShip extends Character {
                         spriteHeight
                 );
             }
-            logger.log(Level.INFO, "Successfully loaded gunflash sprites");
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Failed to load gunflash sprites", e);
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Unexpected error loading gunflash sprites", e);
         }
     }
 
@@ -116,6 +115,7 @@ public class PlayerShip extends Character {
         bullets = new ArrayList<>();
         loadSpriteSheet();
         loadBeamSprites();
+        logger.info("PlayerShip initialized at position ({}, {})", x, y);
     }
 
     private void loadSpriteSheet() {
@@ -132,9 +132,11 @@ public class PlayerShip extends Character {
                             SPRITE_HEIGHT
                     );
                 }
-            }
+            }            logger.debug("Sprite sheet loaded successfully");
+
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Failed to load sprite sheet", e);
+            logger.error("Failed to load sprite sheet", e);
+
         }
     }
 
@@ -170,22 +172,21 @@ public class PlayerShip extends Character {
 
     @Override
     public void update() {
-        // อัปเดต invincibility
+        //  invincibility
         if (isInvincible) {
             invincibleTicks--;
             if (invincibleTicks <= 0) {
                 isInvincible = false;
+                logger.debug("Invincibility expired");
             }
             shieldAngle += SHIELD_ROTATION;
         }
 
-        // อัปเดตการเคลื่อนที่ของยานและ screen wrapping
         move(); // This calls the parent's move() which includes screenWrap()
 
         velocityX *= DECELERATION;
         velocityY *= DECELERATION;
         isMoving = Math.abs(velocityX) > 0.01 || Math.abs(velocityY) > 0.01;
-
         // อัปเดต animation
         updateAnimation();
 
@@ -202,6 +203,7 @@ public class PlayerShip extends Character {
             beamCharge += BEAM_RECHARGE_RATE;
             if (beamCharge >= 100) {
                 canFireBeam = true;
+                logger.info("Beam fully charged");
             }
         }
 
@@ -210,6 +212,7 @@ public class PlayerShip extends Character {
             if (beamCharge <= 0) {
                 firingBeam = false;
                 canFireBeam = false;
+                logger.warn("Beam depleted");
             }
             // Update beam animation
             beamAnimationTick++;
@@ -298,7 +301,6 @@ public class PlayerShip extends Character {
                 }
             }
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Failed to load beam sprites", e);
         }
     }
 
@@ -407,7 +409,6 @@ public class PlayerShip extends Character {
     private void startGunflashAnimation() {
         currentGunflashFrame = 0;
         gunflashTick = 0;
-        logger.log(Level.WARNING, "Starting gunflash animation");
     }
 
     public void shoot() {
@@ -417,7 +418,7 @@ public class PlayerShip extends Character {
         double bulletY = y + spawnDistance * Math.sin(radianAngle);
         bullets.add(new Bullet(bulletX, bulletY, angle - 90));
         startGunflashAnimation();
-        System.out.println("Pew! Pew!");
+        logger.debug("Shot fired at angle: {}", angle);
     }
 
 
@@ -488,6 +489,7 @@ public class PlayerShip extends Character {
             double bulletSpawnY = y + spawnDistance * Math.sin(radianCurrentAngle);
             bullets.add(new Bullet(bulletSpawnX, bulletSpawnY, currentAngle));
         }
+        logger.debug("Ultimate attack: {} bullets fired at spread angle {}", numberOfBullets, spreadAngle);
     }
 
     private void limitVelocity() {
@@ -512,7 +514,11 @@ public class PlayerShip extends Character {
     }
 
     private void logPosition() {
-        logger.log(Level.INFO, String.format("PlayerShip Velocity (%.2f, %.2f)", velocityX, velocityY));
+        // Log current position and angle
+        logger.debug("Ship position - X: {}, Y: {}, Angle: {}",
+                String.format("%.2f", x),
+                String.format("%.2f", y),
+                String.format("%.2f", angle));
     }
 
     public double getX() {
@@ -539,6 +545,9 @@ public class PlayerShip extends Character {
     public void setInvincible(boolean invincible) {
         this.isInvincible = invincible;
         this.invincibleTicks = invincible ? INVINCIBLE_DURATION : 0;
+        logger.info("Invincibility {} - Duration: {} ticks",
+                invincible ? "activated" : "deactivated",
+                invincible ? INVINCIBLE_DURATION : 0);
     }
 
     public boolean isInvincible() {
@@ -546,19 +555,31 @@ public class PlayerShip extends Character {
     }
     @Override
     protected void screenWrap() {
-        // Screen wrapping logic with smooth transition
+        boolean wrapped = false;
+        double oldX = x;
+        double oldY = y;
+
         if (x < -SPRITE_WIDTH/2) {
             x = SCREEN_WIDTH + SPRITE_WIDTH/2;
+            wrapped = true;
         } else if (x > SCREEN_WIDTH + SPRITE_WIDTH/2) {
             x = -SPRITE_WIDTH/2;
+            wrapped = true;
         }
 
         if (y < -SPRITE_HEIGHT/2) {
             y = SCREEN_HEIGHT + SPRITE_HEIGHT/2;
+            wrapped = true;
         } else if (y > SCREEN_HEIGHT + SPRITE_HEIGHT/2) {
             y = -SPRITE_HEIGHT/2;
+            wrapped = true;
+        }
+
+        if (wrapped) {
+            logger.debug("Screen wrap from ({}, {}) to ({}, {})", oldX, oldY, x, y);
         }
     }
+
 
 
 
@@ -633,4 +654,5 @@ public class PlayerShip extends Character {
                 beamHitboxWidth
         );
     }
+
 }
