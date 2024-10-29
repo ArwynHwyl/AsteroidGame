@@ -18,8 +18,8 @@ public class Bullet {
 
     // Static bullet sprite
     private static BufferedImage bulletSprite;
-    private static final int SPRITE_WIDTH = 32; // ปรับตามขนาดจริงของรูปที่ให้มา
-    private static final int SPRITE_HEIGHT = 16; // ปรับตามขนาดจริงของรูปที่ให้มา
+    private static final int SPRITE_WIDTH = 32;
+    private static final int SPRITE_HEIGHT = 16;
     private static final Logger logger = Logger.getLogger(Bullet.class.getName());
 
     static {
@@ -62,20 +62,18 @@ public class Bullet {
 
     public void draw(Graphics2D g) {
         if (bulletSprite == null) {
-            // Fallback ถ้าโหลดรูปไม่สำเร็จ
+            //Fallback if no image loaded
             g.setColor(Color.BLUE);
             g.fillOval((int) x - 2, (int) y - 2, 4, 4);
             return;
         }
 
-        // เก็บ transform เดิมไว้
         AffineTransform oldTransform = g.getTransform();
 
-        // เคลื่อนไปที่ตำแหน่งกระสุนและหมุนตามทิศทาง
         g.translate(x, y);
         g.rotate(Math.toRadians(angle));
 
-        // วาดกระสุนโดยให้จุดกึ่งกลางอยู่ที่ตำแหน่งปัจจุบัน
+        // Draw from current position
         g.drawImage(bulletSprite,
                 -SPRITE_WIDTH/2,
                 -SPRITE_HEIGHT/2,
@@ -83,12 +81,10 @@ public class Bullet {
                 SPRITE_HEIGHT,
                 null);
 
-        // คืน transform กลับไปค่าเดิม
         g.setTransform(oldTransform);
     }
 
     public Rectangle getBounds() {
-        // ใช้ hitbox ที่เล็กกว่าขนาดรูปเล็กน้อยเพื่อการชนที่แม่นยำขึ้น
         int hitboxWidth = SPRITE_WIDTH - 8;
         int hitboxHeight = SPRITE_HEIGHT - 4;
         return new Rectangle(

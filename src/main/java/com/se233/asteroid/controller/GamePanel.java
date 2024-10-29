@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Set;
 
 public class GamePanel extends JPanel implements ActionListener, KeyListener, MouseListener, MouseMotionListener {
+    //Start screen
+    private boolean gameStarted = false;
+    private boolean showStartMenu = true;
     private Timer timer;
     private PlayerShip player;
     private List<Asteroid> asteroids;
@@ -33,10 +36,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     // Boss phase variables
     private boolean bossPhaseStarted = false;
     private boolean bossDefeated = false;
+    //On win screen
+    private float endingAlpha = 0f; // ความโปร่งใสของเอฟเฟกต์
+    private Timer endingTimer; // Timer สำหรับ animation
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(800, 600));
-        initializeGame();
+        setupInitialState();
         timer = new Timer(16, this); // 60 FPS
         timer.start();
 
@@ -47,11 +53,20 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         addKeyListener(this);
 
 
+        // Initialize ending timer
+        endingTimer = new Timer(16, e -> {
+            if (gameSucceeded) {
+                endingAlpha = Math.min(1f, endingAlpha + 0.02f);
+                repaint();
+            }
+        });
+        endingTimer.start();
+
         // Mouse controls for rotation
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (!gameOver) {
+                if (!gameOver && gameStarted) {
                     if (SwingUtilities.isLeftMouseButton(e)) {
                         player.rotateLeft();
                     } else if (SwingUtilities.isRightMouseButton(e)) {
@@ -61,10 +76,28 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             }
         });
     }
+    private void setupInitialState() {
+        // Initialize empty collections
+        asteroids = new ArrayList<>();
+        regularEnemies = new ArrayList<>();
+        secondTierEnemies = new ArrayList<>();
+        explosions = new ArrayList<>();
+        activeKeys = new HashSet<>();
 
+        // Load background
+        backgroundImage = new ImageIcon(getClass().getResource("/assets/bg.gif")).getImage();
+
+        // Set initial game state
+        gameStarted = false;
+        showStartMenu = true;
+        gameOver = false;
+        bossPhaseStarted = false;
+        bossDefeated = false;
+        isExploding = false;
+    }
     private void initializeGame() {
         player = new PlayerShip(400, 300);
-        player.setInvincible(true);  // ตั้งค่าให้เป็นอมตะตอนเริ่มเกม
+        player.setInvincible(true);
         asteroids = new ArrayList<>();
         regularEnemies = new ArrayList<>();
         secondTierEnemies = new ArrayList<>();
@@ -77,7 +110,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         bossPhaseStarted = false;
         bossDefeated = false;
         isExploding = false;
-
+        gameStarted = true;
+        showStartMenu = false;
         // Load background
         backgroundImage = new ImageIcon(getClass().getResource("/assets/bg.gif")).getImage();
 
@@ -89,14 +123,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (gameOver) return;
+        if (showStartMenu) {
+            repaint();
+            return;
+        }
+
+        if (gameOver || !gameStarted) return;
 
         if (isExploding) {
             handleExplosion();
             return;
         }
 
-        // Update game objects
         handlePlayerMovement();
         updateGameObjects();
         checkCollisions();
@@ -244,6 +282,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                         score += 50;
                         bossDefeated = true;
                         gameSucceeded = true;
+                        gameOver = true;
                         gameSucceedMessage += score;
                     }
                 }
@@ -302,6 +341,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 score += 50;
                 bossDefeated = true;
                 gameSucceeded = true;
+                gameOver=true;
                 gameSucceedMessage += score;
             }
             return true;
@@ -380,18 +420,21 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // Draw background
+        // วาด background
         g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
 
-        if (!gameOver) {
-            // Draw game objects
+        if (showStartMenu) {
+            drawStartMenu(g2d);
+            return;
+        }
+
+        if (!gameOver && gameStarted) {
             if (!isExploding) {
                 player.draw(g2d);
             } else {
                 drawExplosion(g2d);
             }
 
-            // Draw enemies and asteroids
             for (Asteroid asteroid : asteroids) {
                 asteroid.draw(g2d);
             }
@@ -402,18 +445,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 enemy.draw(g2d);
             }
 
-            // Draw boss if active
             if (boss != null && boss.isAlive()) {
                 boss.draw(g2d);
             }
 
-            // Draw explosions
             for (Explosion explosion : explosions) {
                 explosion.draw(g2d);
             }
 
             drawHUD(g2d);
-        } else {
+        } else if (gameOver) {
             if (bossDefeated) {
                 drawGameSucceeded(g2d);
             } else {
@@ -421,6 +462,44 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
             }
         }
     }
+    private void drawStartMenu(Graphics2D g2d) {
+        // ตั้งค่าสไตล์ข้อความ
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Arial", Font.BOLD, 50));
+
+        // วาดชื่อเกม
+        String title = "ASTEROID SHOOTER";
+        FontMetrics titleMetrics = g2d.getFontMetrics();
+        int titleX = (getWidth() - titleMetrics.stringWidth(title)) / 2;
+        g2d.drawString(title, titleX, getHeight() / 3);
+
+        // วาดข้อความแนะนำ
+        g2d.setFont(new Font("Arial", Font.BOLD, 30));
+        String startText = "Press 'T' to Start";
+        FontMetrics startMetrics = g2d.getFontMetrics();
+        int startX = (getWidth() - startMetrics.stringWidth(startText)) / 2;
+        g2d.drawString(startText, startX, getHeight() / 2);
+
+        // วาดคำแนะนำการควบคุม
+        g2d.setFont(new Font("Arial", Font.PLAIN, 20));
+        String[] controls = {
+                "Controls:",
+                "WASD - Move",
+                "SPACE - Shoot",
+                "E - Ultimate Shot",
+                "Q - Beam Laser",
+                "Mouse - Rotate"
+        };
+
+        int yOffset = getHeight() / 2 + 50;
+        for (String control : controls) {
+            FontMetrics controlMetrics = g2d.getFontMetrics();
+            int controlX = (getWidth() - controlMetrics.stringWidth(control)) / 2;
+            g2d.drawString(control, controlX, yOffset);
+            yOffset += 30;
+        }
+    }
+
 
     private void drawExplosion(Graphics2D g2d) {
         g2d.setColor(Color.ORANGE);
@@ -447,18 +526,61 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         g2d.drawString(gameOverMessage, (getWidth() - textWidth) / 2, getHeight() / 2);
     }
 
+
     private void drawGameSucceeded(Graphics2D g2d) {
-        g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 40));
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        GradientPaint gradient = new GradientPaint(
+                0, 0, new Color(0, 0, 0.5f, 0.8f),
+                0, getHeight(), new Color(0, 0, 0.3f, 0.8f)
+        );
+        g2d.setPaint(gradient);
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+        Font titleFont = new Font("Arial", Font.BOLD, 50);
+        Font scoreFont = new Font("Arial", Font.BOLD, 30);
+        Font continueFont = new Font("Arial", Font.PLAIN, 20);
+
+        String victoryText = "MISSION ACCOMPLISHED";
+        String scoreText = "Final Score: " + score;
+        String continueText = "Press SPACE to restart";
+
+        drawTextWithShadow(g2d, victoryText, titleFont, 0, getHeight()/3);
+        drawTextWithShadow(g2d, scoreText, scoreFont, 0, getHeight()/2);
+        drawTextWithShadow(g2d, continueText, continueFont, 0, 2 * getHeight()/3);
+    }
+
+    private void drawTextWithShadow(Graphics2D g2d, String text, Font font, int offset, int y) {
+        g2d.setFont(font);
         FontMetrics fm = g2d.getFontMetrics();
-        int textWidth = fm.stringWidth(gameSucceedMessage);
-        g2d.drawString(gameSucceedMessage, (getWidth() - textWidth) / 2, getHeight() / 2);
+        int x = (getWidth() - fm.stringWidth(text)) / 2;
+
+
+        g2d.setColor(new Color(0f, 0f, 0f, 0.5f * endingAlpha));
+        g2d.drawString(text, x + offset + 2, y + offset + 2);
+
+        g2d.setColor(new Color(1f, 1f, 1f, endingAlpha));
+        g2d.drawString(text, x + offset, y + offset);
     }
 
     // Key Listeners
     @Override
     public void keyPressed(KeyEvent e) {
-        if (!gameOver) {
+        if (showStartMenu && e.getKeyCode() == KeyEvent.VK_T) {
+            initializeGame();
+            return;
+        }
+
+        // เพิ่มการตรวจจับปุ่ม SPACE สำหรับเริ่มเกมใหม่
+        if (gameSucceeded && e.getKeyCode() == KeyEvent.VK_SPACE) {
+            endingAlpha = 0f;
+            showStartMenu = true;
+            gameSucceeded = false;
+            return;
+        }
+
+        if (!gameOver && gameStarted) {
             activeKeys.add(e.getKeyCode());
             if (e.getKeyCode() == KeyEvent.VK_SPACE) {
                 player.setShooting(true);

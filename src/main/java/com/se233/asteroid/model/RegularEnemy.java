@@ -16,11 +16,10 @@ public class RegularEnemy extends Character {
     private static final double BULLET_SPEED = 1.0;
     private BufferedImage enemyImage;
 
-    // ค่าคงที่สำหรับขนาดของยานศัตรู
-    private static final int SHIP_WIDTH = 50;    // ปรับขนาดความกว้างของรูป
-    private static final int SHIP_HEIGHT = 40;   // ปรับขนาดความสูงของรูป
-    private static final int HITBOX_WIDTH = 45;  // ปรับขนาด hitbox ให้เล็กกว่ารูปเล็กน้อย
-    private static final int HITBOX_HEIGHT = 35; // ปรับขนาด hitbox ให้เล็กกว่ารูปเล็กน้อย
+    private static final int SHIP_WIDTH = 50;
+    private static final int SHIP_HEIGHT = 40;
+    private static final int HITBOX_WIDTH = 45;
+    private static final int HITBOX_HEIGHT = 35;
 
     public RegularEnemy(double x, double y, double velocityX, double velocityY, double angle, int health) {
         super(x, y, velocityX, velocityY, angle, health);
@@ -28,7 +27,6 @@ public class RegularEnemy extends Character {
         this.maxHealth = health;
         this.currentCooldown = (int)(Math.random() * SHOOT_COOLDOWN);
 
-        // โหลดรูปภาพ
         try {
             ImageIcon icon = new ImageIcon(getClass().getResource("/assets/Regular.png"));
             Image originalImage = icon.getImage();
@@ -48,24 +46,22 @@ public class RegularEnemy extends Character {
         x += velocityX;
         y += velocityY;
 
-        // เปลี่ยนจาก wrap เป็น bounce
         if (x - SHIP_WIDTH/2 <= 0) {
             x = SHIP_WIDTH/2;
-            velocityX = Math.abs(velocityX); // เด้งไปทางขวา
+            velocityX = Math.abs(velocityX);
         } else if (x + SHIP_WIDTH/2 >= 800) {
             x = 800 - SHIP_WIDTH/2;
-            velocityX = -Math.abs(velocityX); // เด้งไปทางซ้าย
+            velocityX = -Math.abs(velocityX);
         }
 
         if (y - SHIP_HEIGHT/2 <= 0) {
             y = SHIP_HEIGHT/2;
-            velocityY = Math.abs(velocityY); // เด้งลงล่าง
+            velocityY = Math.abs(velocityY);
         } else if (y + SHIP_HEIGHT/2 >= 600) {
             y = 600 - SHIP_HEIGHT/2;
-            velocityY = -Math.abs(velocityY); // เด้งขึ้นบน
+            velocityY = -Math.abs(velocityY);
         }
 
-        // ส่วนที่เหลือของ update() คงเดิม
         if (currentCooldown > 0) {
             currentCooldown--;
         }
@@ -112,11 +108,10 @@ public class RegularEnemy extends Character {
     }
 
     private void drawHealthBar(Graphics2D g) {
-        int healthBarWidth = 100;  // เพิ่มขนาด health bar
-        int healthBarHeight = 6;   // เพิ่มความสูง health bar
+        int healthBarWidth = 100;
+        int healthBarHeight = 6;
         int currentHealthWidth = (int)((health / (double)maxHealth) * healthBarWidth);
 
-        // ย้ายตำแหน่ง health bar ให้อยู่เหนือรูป
         g.setColor(new Color(255, 0, 0, 128));
         g.fillRect((int)x - healthBarWidth/2, (int)y - SHIP_HEIGHT/2 - 15,
                 healthBarWidth, healthBarHeight);
@@ -149,7 +144,6 @@ public class RegularEnemy extends Character {
     }
 
     public Rectangle getBounds() {
-        // ปรับ hitbox ให้เล็กกว่ารูปเล็กน้อยเพื่อความเหมาะสมในการเล่น
         return new Rectangle(
                 (int)(x - HITBOX_WIDTH/2),
                 (int)(y - HITBOX_HEIGHT/2),

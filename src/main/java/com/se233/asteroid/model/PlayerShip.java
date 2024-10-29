@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -45,7 +46,7 @@ public class PlayerShip extends Character {
     //Invincible bf spawn
     private boolean isInvincible = false;
     private int invincibleTicks = 0;
-    private static final int INVINCIBLE_DURATION = 120; // 2 วินาที (60 frames/วินาที)
+    private static final int INVINCIBLE_DURATION = 120;
     private static final float BLINK_RATE = 0.125f;
     private static final float SHIELD_ROTATION = 0.05f;
     private float shieldAngle = 0;
@@ -357,25 +358,7 @@ public class PlayerShip extends Character {
         g.setColor(Color.WHITE);
         g.drawRect(x, y, barWidth, barHeight);
     }
-    public Rectangle getBeamBounds() {
-        if (!firingBeam) return null;
 
-        double radianAngle = Math.toRadians(angle - 90);
-        int startX = (int)x;
-        int startY = (int)y;
-        int endX = startX + (int)(Math.cos(radianAngle) * BEAM_MAX_LENGTH/2);
-        int endY = startY + (int)(Math.sin(radianAngle) * BEAM_MAX_LENGTH/2);
-
-        // Use a smaller beam width for the hitbox
-        int beamHitboxWidth = BEAM_WIDTH/6;
-
-        return new Rectangle(
-                Math.min(startX, endX) - beamHitboxWidth/2,
-                Math.min(startY, endY) - beamHitboxWidth/2,
-                Math.abs(endX - startX) + beamHitboxWidth,
-                Math.abs(endY - startY) + beamHitboxWidth
-        );
-    }
 
     public void setBeamFiring(boolean firing) {
         if (firing && canFireBeam && beamCharge > 0 && !firingBeam) {
@@ -424,7 +407,7 @@ public class PlayerShip extends Character {
     private void startGunflashAnimation() {
         currentGunflashFrame = 0;
         gunflashTick = 0;
-        logger.log(Level.INFO, "Starting gunflash animation"); // เพิ่ม log เพื่อดีบัก
+        logger.log(Level.WARNING, "Starting gunflash animation");
     }
 
     public void shoot() {
@@ -433,7 +416,7 @@ public class PlayerShip extends Character {
         double bulletX = x + spawnDistance * Math.cos(radianAngle);
         double bulletY = y + spawnDistance * Math.sin(radianAngle);
         bullets.add(new Bullet(bulletX, bulletY, angle - 90));
-        startGunflashAnimation();  // เริ่ม gunflash animation เมื่อยิง
+        startGunflashAnimation();
         System.out.println("Pew! Pew!");
     }
 
