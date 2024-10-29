@@ -9,7 +9,7 @@ import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 
 @Suite
-@SelectClasses({AsteroidTests.class, BossTest.class, GamePanelTest.class, PlayerShipActionTests.class,
+@SelectClasses({AsteroidTests.class, BossTest.class,ScoringTest.class, PlayerShipActionTests.class,
         PlayerShipTest.class, RegularEnemyTests.class, SecondTierTest.class})
 public class JUnitTestSuite {
     @BeforeAll
