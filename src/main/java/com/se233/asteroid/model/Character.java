@@ -2,7 +2,7 @@ package com.se233.asteroid.model;
 
 import java.awt.*;
 
-abstract class Character {
+public abstract class Character {
     protected double x, y;        // Position
     protected double velocityX, velocityY; // Speed
     protected double angle;       // Rotation angle
@@ -28,6 +28,9 @@ abstract class Character {
         if (y < 0) y = 600;
         if (y > 600) y = 0;
     }
+    public int getHealth() {
+        return health;
+    }
     public double getX() {
         return x;
     }
@@ -41,4 +44,25 @@ abstract class Character {
     public boolean isAlive() {
         return health > 0;
     }
+
+    public double getAngle() {
+        return angle;
+    }
+    public double getVelocityX() {
+        return velocityX;
+    }
+
+    public double getVelocityY() {
+        return velocityY;
+    }
+
+    public void setVelocityX(double velocityX) {
+        this.velocityX = velocityX;
+    }
+
+    public void setVelocityY(double velocityY) {
+        this.velocityY = velocityY;
+    }
+
+
 }

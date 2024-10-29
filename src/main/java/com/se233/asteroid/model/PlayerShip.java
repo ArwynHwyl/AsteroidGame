@@ -9,7 +9,6 @@ import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -141,7 +140,7 @@ public class PlayerShip extends Character {
     }
 
     private void updateAnimation() {
-        // อัพเดท animation ของตัวยาน
+        // update animation player
         if (isMoving) {
             animationTick++;
             if (animationTick >= animationDelay) {
@@ -157,7 +156,7 @@ public class PlayerShip extends Character {
             currentDirection = MovementDirection.NONE;
         }
 
-        // อัพเดท gunflash animation
+        // update gunflash animation
         if (currentGunflashFrame >= 0) {
             gunflashTick++;
             if (gunflashTick >= GUNFLASH_ANIMATION_DELAY) {
@@ -165,6 +164,7 @@ public class PlayerShip extends Character {
                 currentGunflashFrame++;
                 if (currentGunflashFrame >= GUNFLASH_FRAMES) {
                     currentGunflashFrame = -1; // End gunflash animation
+                    logger.debug("Gunflash animation completed");
                 }
             }
         }
@@ -254,24 +254,19 @@ public class PlayerShip extends Character {
                         SPRITE_HEIGHT,
                         null);
 
-                // วาด gunflash ถ้ากำลังเล่น animation
                 if (currentGunflashFrame >= 0 && gunflashSprites != null) {
-                    // เก็บ transform ของตัวยานไว้
                     AffineTransform shipTransform = g.getTransform();
 
-                    // หมุน gunflash 90 องศา
                     g.rotate(Math.toRadians(90));
 
-                    // ย้าย gunflash ไปที่ส่วนบนของยาน
                     g.drawImage(gunflashSprites[currentGunflashFrame],
                             SPRITE_HEIGHT/2 - 115,  // ย้ายไปด้านบนของยาน
                             -GUNFLASH_WIDTH/2,  // กึ่งกลางตามแนวแกน x
                             GUNFLASH_WIDTH,
                             GUNFLASH_HEIGHT,
                             null
-                    );
 
-                    // กลับไปที่ transform ของตัวยาน
+                    );
                     g.setTransform(shipTransform);
                 }
 
@@ -329,10 +324,10 @@ public class PlayerShip extends Character {
             // For debugging: draw hitbox outline
             g.setColor(Color.RED);
             g.drawRect(
-                -SINGLE_SPRITE_WIDTH/2,
-                -SINGLE_SPRITE_HEIGHT/2,
-                SINGLE_SPRITE_WIDTH,
-                SINGLE_SPRITE_HEIGHT
+                    -SINGLE_SPRITE_WIDTH/2,
+                    -SINGLE_SPRITE_HEIGHT/2,
+                    SINGLE_SPRITE_WIDTH,
+                    SINGLE_SPRITE_HEIGHT
             );
         }
 
@@ -406,10 +401,15 @@ public class PlayerShip extends Character {
 
         g.setTransform(old);
     }
+
     private void startGunflashAnimation() {
         currentGunflashFrame = 0;
         gunflashTick = 0;
+        logger.warn("Gunflash activated at position ({}, {})",
+                String.format("%.2f", x),
+                String.format("%.2f", y));
     }
+
 
     public void shoot() {
         double radianAngle = Math.toRadians(angle - 90);
@@ -553,30 +553,38 @@ public class PlayerShip extends Character {
     public boolean isInvincible() {
         return isInvincible;
     }
+
     @Override
     protected void screenWrap() {
         boolean wrapped = false;
-        double oldX = x;
-        double oldY = y;
 
-        if (x < -SPRITE_WIDTH/2) {
-            x = SCREEN_WIDTH + SPRITE_WIDTH/2;
+        // Left boundary
+        if (x < 0) {
+            x = SCREEN_WIDTH;
             wrapped = true;
-        } else if (x > SCREEN_WIDTH + SPRITE_WIDTH/2) {
-            x = -SPRITE_WIDTH/2;
+        }
+        // Right boundary
+        else if (x > SCREEN_WIDTH) {
+            x = 0;
             wrapped = true;
         }
 
-        if (y < -SPRITE_HEIGHT/2) {
-            y = SCREEN_HEIGHT + SPRITE_HEIGHT/2;
+        // Top boundary
+        if (y < 0) {
+            y = SCREEN_HEIGHT;
             wrapped = true;
-        } else if (y > SCREEN_HEIGHT + SPRITE_HEIGHT/2) {
-            y = -SPRITE_HEIGHT/2;
+        }
+        // Bottom boundary
+        else if (y > SCREEN_HEIGHT) {
+            y = 0;
             wrapped = true;
         }
 
+        // Log only when actual wrapping occurs
         if (wrapped) {
-            logger.debug("Screen wrap from ({}, {}) to ({}, {})", oldX, oldY, x, y);
+            logger.debug("Screen wrap occurred - New position ({}, {})",
+                    String.format("%.2f", x),
+                    String.format("%.2f", y));
         }
     }
 
@@ -584,7 +592,8 @@ public class PlayerShip extends Character {
 
 
     public class BeamHitbox {
-        private double startX, startY;
+        public double startX;
+        public double startY;
         private double endX, endY;
         private double width;
 
@@ -654,5 +663,4 @@ public class PlayerShip extends Character {
                 beamHitboxWidth
         );
     }
-
 }

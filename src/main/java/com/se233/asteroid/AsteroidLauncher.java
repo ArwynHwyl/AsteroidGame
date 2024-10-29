@@ -1,6 +1,9 @@
+package com.se233.asteroid; // เพิ่ม package declaration
+
 import com.se233.asteroid.controller.GamePanel;
 import javax.swing.*;
 
+public class AsteroidLauncher { // เพิ่มการประกาศ class
     public static void main(String[] args) {
         JFrame frame = new JFrame("Asteroid Game");
         GamePanel gamePanel = new GamePanel();
@@ -10,3 +13,4 @@ import javax.swing.*;
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+}

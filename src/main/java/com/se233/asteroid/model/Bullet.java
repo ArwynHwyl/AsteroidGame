@@ -12,8 +12,8 @@ public class Bullet {
     private double x;
     private double y;
     private double angle;
-    private double velocityX;
-    private double velocityY;
+    double velocityX;
+    double velocityY;
     private double speed = 4;
 
     // Static bullet sprite
@@ -93,5 +93,25 @@ public class Bullet {
                 hitboxWidth,
                 hitboxHeight
         );
+    }
+
+    public double getAngle() {
+        return angle;
+    }
+
+    public double getVelocityX() {
+        return velocityX;
+    }
+
+    public double getVelocityY() {
+        return velocityY;
+    }
+
+    public double getSpeed() {
+        return speed;
+    }
+
+    public static BufferedImage getBulletSprite() {
+        return bulletSprite;
     }
 }

@@ -42,6 +42,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     //On win screen
     private float endingAlpha = 0f;
     private Timer endingTimer;
+    // Add new fields to GamePanel class
+    private boolean bossSpawning = false;  // Track if we're in spawn countdown
+    private int bossSpawnTimer = 180;      // 3 seconds at 60 FPS
+    private String bossWarningText = "BOSS INCOMING!";
 
     private static final Logger logger = LogManager.getLogger(GamePanel.class);
 
@@ -197,15 +201,29 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     }
 
     private void checkBossSpawning() {
-        if (!bossPhaseStarted && asteroids.isEmpty() && regularEnemies.isEmpty() &&
+        // Check if it's time to start boss spawn countdown
+        if (!bossPhaseStarted && !bossSpawning &&
+                asteroids.isEmpty() && regularEnemies.isEmpty() &&
                 secondTierEnemies.isEmpty()) {
-            startBossPhase();
+            bossSpawning = true;
+            bossSpawnTimer = 180; // Reset timer
+            logger.info("Starting boss spawn countdown");
+        }
+
+        // If we're in spawn countdown
+        if (bossSpawning) {
+            bossSpawnTimer--;
+            if (bossSpawnTimer <= 0) {
+                startBossPhase();
+                bossSpawning = false;
+            }
         }
     }
 
     private void startBossPhase() {
         bossPhaseStarted = true;
-        boss = new Boss(400, 300,player);
+        boss = new Boss(400, 100, player); // Spawn boss at top center
+        logger.info("Boss phase started");
     }
 
     private void checkCollisions() {
@@ -248,8 +266,14 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                         explosions.add(new Explosion(asteroid.getX(), asteroid.getY()));
                         asteroid.hit();
                         if (asteroid.isDestroyed()) {
+                            // เพิ่มการตรวจสอบว่าเป็น large asteroid ที่ถูกทำลายหรือไม่
+                            if (asteroid.wasLargeDestroyed()) {
+                                // สร้าง small asteroids 2 อัน
+                                asteroids.add(Asteroid.createSmallAsteroid(asteroid.getX(), asteroid.getY()));
+                                asteroids.add(Asteroid.createSmallAsteroid(asteroid.getX(), asteroid.getY()));
+                            }
                             int points = asteroid.isLarge() ? 2 : 1;
-                            score += asteroid.isLarge() ? 2 : 1;
+                            score += points;
                             logger.info("Score increased by {} points - Asteroid destroyed by beam. Current score: {}",
                                     points, score);
                             asteroids.remove(i);
@@ -313,10 +337,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
                 explosions.add(new Explosion(bullet.getX(), bullet.getY()));
                 asteroid.hit();
                 if (asteroid.isDestroyed()) {
+                    // เช็คว่าเป็น large asteroid ที่ถูกทำลายหรือไม่
+                    if (asteroid.wasLargeDestroyed()) {
+                        // สร้าง small asteroids 2 อัน
+                        asteroids.add(Asteroid.createSmallAsteroid(asteroid.getX(), asteroid.getY()));
+                        asteroids.add(Asteroid.createSmallAsteroid(asteroid.getX(), asteroid.getY()));
+                    }
                     int points = asteroid.isLarge() ? 2 : 1;
-                    score += asteroid.isLarge() ? 2 : 1;
+                    score += points;
                     logger.info("Score increased by {} points - Asteroid destroyed. Current score: {}",
-                            points,score);
+                            points, score);
                     asteroids.remove(j);
                 }
                 return true;
@@ -536,7 +566,24 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
         g2d.drawString("Score: " + score, 20, 30);
         g2d.drawString("Lives: " + lives, 20, 60);
 
+        // Draw boss warning during spawn countdown
+        if (bossSpawning) {
+            g2d.setFont(new Font("Arial", Font.BOLD, 40));
+            FontMetrics fm = g2d.getFontMetrics();
+            int textWidth = fm.stringWidth(bossWarningText);
+            int textX = (getWidth() - textWidth) / 2;
+            int textY = getHeight() / 2;
+
+            // Make text flash by changing alpha
+            float alpha = (float)Math.abs(Math.sin(bossSpawnTimer * 0.05));
+            g2d.setColor(new Color(1f, 0f, 0f, alpha));
+            g2d.drawString(bossWarningText, textX, textY);
+        }
+
+        // Show boss battle text when boss is active
         if (bossPhaseStarted && boss != null && boss.isAlive()) {
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("Arial", Font.BOLD, 20));
             g2d.drawString("BOSS BATTLE", getWidth()/2 - 60, 30);
         }
     }
@@ -563,15 +610,15 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
 
         Font titleFont = new Font("Arial", Font.BOLD, 50);
         Font scoreFont = new Font("Arial", Font.BOLD, 30);
-        Font continueFont = new Font("Arial", Font.PLAIN, 20);
+
 
         String victoryText = "MISSION ACCOMPLISHED";
         String scoreText = "Final Score: " + score;
-        String continueText = "Press SPACE to restart";
+
 
         drawTextWithShadow(g2d, victoryText, titleFont, 0, getHeight()/3);
         drawTextWithShadow(g2d, scoreText, scoreFont, 0, getHeight()/2);
-        drawTextWithShadow(g2d, continueText, continueFont, 0, 2 * getHeight()/3);
+
     }
 
     private void drawTextWithShadow(Graphics2D g2d, String text, Font font, int offset, int y) {
@@ -650,11 +697,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener, Mo
     public void mouseMoved(MouseEvent e) {}
 
     private void spawnAsteroids() {
-        for (int i = 0; i < 2; i++) {
+        // spawn เฉพาะ large asteroids
+        for (int i = 0; i < 3; i++) { // ปรับจำนวนตามความเหมาะสม
             asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, true));
-        }
-        for (int i = 0; i < 4; i++) {
-            asteroids.add(new Asteroid(Math.random() * 800, Math.random() * 600, false));
         }
     }
 

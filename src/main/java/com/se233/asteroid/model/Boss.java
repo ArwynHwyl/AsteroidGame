@@ -39,13 +39,15 @@ public class Boss extends Character {
     private static final double WAVE_SPEED = 7.0;
     private static final double CROSS_SPEED = 10.0;
     //orbital move
-    private static final double ORBIT_RADIUS = 200.0; // ระยะห่างจากผู้เล่น
-    private static final double ORBIT_SPEED = 0.02;   // ความเร็วในการวน
     private double orbitAngle = 0;                    // มุมปัจจุบันในการวน
     private PlayerShip target;                        // อ้างอิงถึงผู้เล่น
-    private static final double MIN_DISTANCE = 200.0; // ระยะห่างขั้นต่ำ
-    private static final double MAX_DISTANCE = 300.0; // ระยะห่างสูงสุด
     private double currentDistance = ORBIT_RADIUS;
+    private static final double ORBIT_RADIUS = 250.0; // ปรับระยะห่างเริ่มต้นให้อยู่กึ่งกลางระหว่าง MIN และ MAX
+    private static final double ORBIT_SPEED = 0.015;  // ลดความเร็วในการวนลงเล็กน้อย
+    private static final double MOVEMENT_SPEED = 2; // เพิ่มความเร็วในการเคลื่อนที่
+    private static final double MIN_DISTANCE = 200.0;
+    private static final double MAX_DISTANCE = 300.0;
+    private static final double DISTANCE_ADJUSTMENT_SPEED = 1.5; // ความเร็วในการปรับระยะห่าง
     public Boss(double x, double y,PlayerShip player) {
         super(x, y, 0, 0, 0, INITIAL_HEALTH);
         this.attackCooldown = 0;
@@ -228,24 +230,24 @@ public class Boss extends Character {
     }
 
     private void updateMovement() {
-        // ตรวจสอบว่ามี target และยังมีชีวิตอยู่
-        if (target == null) {
-            logger.log(Level.WARNING, "No target found for boss movement");
-            return;
-        }
-
-        if (!isAlive()) return;
+        if (target == null || !isAlive()) return;
 
         // คำนวณระยะห่างปัจจุบันจากผู้เล่น
         double dx = x - target.getX();
         double dy = y - target.getY();
         double currentDistanceToPlayer = Math.sqrt(dx * dx + dy * dy);
 
-        // ปรับระยะห่างเพื่อรักษาระยะที่เหมาะสม
+        // ปรับระยะห่างแบบค่อยเป็นค่อยไป
         if (currentDistanceToPlayer < MIN_DISTANCE) {
-            currentDistance = Math.min(currentDistance + 2.0, MAX_DISTANCE);
+            currentDistance += DISTANCE_ADJUSTMENT_SPEED;
+            if (currentDistance > MAX_DISTANCE) {
+                currentDistance = MAX_DISTANCE;
+            }
         } else if (currentDistanceToPlayer > MAX_DISTANCE) {
-            currentDistance = Math.max(currentDistance - 2.0, MIN_DISTANCE);
+            currentDistance -= DISTANCE_ADJUSTMENT_SPEED;
+            if (currentDistance < MIN_DISTANCE) {
+                currentDistance = MIN_DISTANCE;
+            }
         }
 
         // อัปเดตมุมการวน
@@ -254,16 +256,20 @@ public class Boss extends Character {
             orbitAngle -= Math.PI * 2;
         }
 
-        // คำนวณตำแหน่งใหม่
+        // คำนวณตำแหน่งเป้าหมาย
         double targetX = target.getX() + Math.cos(orbitAngle) * currentDistance;
         double targetY = target.getY() + Math.sin(orbitAngle) * currentDistance;
 
-        // คำนวณความเร็วในการเคลื่อนที่
-        double moveSpeed = 3.0;
+        // คำนวณเวกเตอร์การเคลื่อนที่
         double moveAngle = Math.atan2(targetY - y, targetX - x);
 
-        velocityX = Math.cos(moveAngle) * moveSpeed;
-        velocityY = Math.sin(moveAngle) * moveSpeed;
+        // ปรับความเร็วตามระยะห่างจากตำแหน่งเป้าหมาย
+        double distanceToTarget = Math.sqrt(Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
+        double speedMultiplier = Math.min(distanceToTarget / 50.0, 1.0); // ปรับความเร็วตามระยะห่าง
+
+        // อัปเดตความเร็ว
+        velocityX = Math.cos(moveAngle) * MOVEMENT_SPEED * speedMultiplier;
+        velocityY = Math.sin(moveAngle) * MOVEMENT_SPEED * speedMultiplier;
 
         // อัปเดตตำแหน่ง
         x += velocityX;
@@ -273,8 +279,8 @@ public class Boss extends Character {
         angle = Math.toDegrees(Math.atan2(target.getY() - y, target.getX() - x));
 
         // ตรวจสอบขอบจอ
-        x = Math.max(0, Math.min(x, 800));
-        y = Math.max(0, Math.min(y, 600));
+        x = Math.max(50, Math.min(x, 750)); // เพิ่มระยะห่างจากขอบ
+        y = Math.max(50, Math.min(y, 550)); // เพิ่มระยะห่างจากขอบ
 
         patternDuration++;
     }

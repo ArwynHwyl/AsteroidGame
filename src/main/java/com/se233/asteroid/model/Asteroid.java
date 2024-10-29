@@ -8,21 +8,19 @@ import java.awt.image.BufferedImage;
 public class Asteroid extends Character {
     private int maxHealth;
     private boolean isLarge;
-    private double rotationAngle;
+    public double rotationAngle;
     private double rotationSpeed;
     private BufferedImage asteroidImage;
 
-    // ขนาดต่างๆ คงเดิม
-    private static final int LARGE_WIDTH = 120;
-    private static final int LARGE_HEIGHT = 70;
-    private static final int SMALL_WIDTH = 90;
-    private static final int SMALL_HEIGHT = 50;
-    private static final int LARGE_HITBOX = 50;
-    private static final int SMALL_HITBOX = 25;
+    // Sizes with correct hitboxes
+    private static final int LARGE_DIAMETER = 110;
+    private static final int SMALL_DIAMETER = 50;
+    private static final int LARGE_HITBOX_SIZE = 100;  // ปรับให้เล็กกว่าภาพเล็กน้อย
+    private static final int SMALL_HITBOX_SIZE = 45;   // ปรับให้เล็กกว่าภาพเล็กน้อย
 
-    // เพิ่มค่าคงที่สำหรับขอบเขตหน้าจอ
     private static final int SCREEN_WIDTH = 800;
     private static final int SCREEN_HEIGHT = 600;
+    private boolean wasLargeDestroyed = false;
 
     public Asteroid(double x, double y, boolean isLarge) {
         super(x, y,
@@ -36,62 +34,35 @@ public class Asteroid extends Character {
         this.rotationAngle = Math.random() * 360;
         this.rotationSpeed = Math.random() * 2 - 1;
 
+        loadImage();
+    }
+
+    private void loadImage() {
         try {
-            ImageIcon icon = new ImageIcon(getClass().getResource("/assets/asteroid.png"));
+            // Load the dark asteroid image
+            ImageIcon icon = new ImageIcon(getClass().getResource("/assets/realasteroid.png"));
             Image originalImage = icon.getImage();
 
-            int width = isLarge ? LARGE_WIDTH : SMALL_WIDTH;
-            int height = isLarge ? LARGE_HEIGHT : SMALL_HEIGHT;
-
-            asteroidImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            int diameter = isLarge ? LARGE_DIAMETER : SMALL_DIAMETER;
+            asteroidImage = new BufferedImage(diameter, diameter, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g2d = asteroidImage.createGraphics();
-            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
-            int drawWidth = width;
-            int drawHeight = height;
+            // Minimal rendering hints for better performance
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
-            g2d.drawImage(originalImage, 0, 0, drawWidth, drawHeight, null);
+            g2d.drawImage(originalImage, 0, 0, diameter, diameter, null);
             g2d.dispose();
         } catch (Exception e) {
             System.err.println("Error loading asteroid image: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public void update() {
-        x += velocityX;
-        y += velocityY;
-
-        rotationAngle += rotationSpeed;
-
-        handleScreenBounce();
-    }
-
-    private void handleScreenBounce() {
-        int boundWidth = isLarge ? LARGE_WIDTH : SMALL_WIDTH;
-        int boundHeight = isLarge ? LARGE_HEIGHT : SMALL_HEIGHT;
-        boolean bounced = false;
-
-        if (x - boundWidth/2 <= 0) {
-            x = boundWidth/2;
-            velocityX = Math.abs(velocityX);
-            bounced = true;
-        } else if (x + boundWidth/2 >= SCREEN_WIDTH) {
-            x = SCREEN_WIDTH - boundWidth/2;
-            velocityX = -Math.abs(velocityX);
-            bounced = true;
-        }
-        if (y - boundHeight/2 <= 0) {
-            y = boundHeight/2;
-            velocityY = Math.abs(velocityY);
-            bounced = true;
-        } else if (y + boundHeight/2 >= SCREEN_HEIGHT) {
-            y = SCREEN_HEIGHT - boundHeight/2;
-            velocityY = -Math.abs(velocityY);
-            bounced = true;
-        }
-        if (bounced) {
-            rotationSpeed = Math.random() * 2 - 1;
+            // Fallback to simple filled circle if image fails to load
+            asteroidImage = new BufferedImage(
+                    isLarge ? LARGE_DIAMETER : SMALL_DIAMETER,
+                    isLarge ? LARGE_DIAMETER : SMALL_DIAMETER,
+                    BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = asteroidImage.createGraphics();
+            g2d.setColor(Color.DARK_GRAY);
+            g2d.fillOval(0, 0, asteroidImage.getWidth(), asteroidImage.getHeight());
+            g2d.dispose();
         }
     }
 
@@ -104,40 +75,46 @@ public class Asteroid extends Character {
             g.drawImage(asteroidImage, transform, null);
         }
 
+        // Debug: แสดง hitbox (ถ้าต้องการ)
+        /*
+        Rectangle bounds = getBounds();
+        g.setColor(new Color(255, 0, 0, 100));
+        g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        */
+
         drawHealthBar(g);
     }
 
     private void drawHealthBar(Graphics2D g) {
-        int healthBarWidth = isLarge ? 120 : 80;
-        int healthBarHeight = 6;
+        int healthBarWidth = isLarge ? LARGE_DIAMETER : SMALL_DIAMETER;
+        int healthBarHeight = 4;
         int currentHealthWidth = (int)((health / (double)maxHealth) * healthBarWidth);
-        int yOffset = isLarge ? LARGE_HEIGHT/2 + 15 : SMALL_HEIGHT/2 + 15;
+        int yOffset = (isLarge ? LARGE_DIAMETER : SMALL_DIAMETER) / 2 + 10;
 
-        // Background of health bar
-        g.setColor(new Color(255, 0, 0, 128));
+        // Simplified health bar colors with less transparency
+        g.setColor(new Color(255, 0, 0));
         g.fillRect((int)x - healthBarWidth/2, (int)y - yOffset,
                 healthBarWidth, healthBarHeight);
 
-        // Current health
-        g.setColor(new Color(0, 255, 0, 192));
+        g.setColor(new Color(0, 255, 0));
         g.fillRect((int)x - healthBarWidth/2, (int)y - yOffset,
                 currentHealthWidth, healthBarHeight);
     }
 
     public Rectangle getBounds() {
-        int hitboxSize = isLarge ? LARGE_HITBOX : SMALL_HITBOX;
+        int size = isLarge ? LARGE_HITBOX_SIZE : SMALL_HITBOX_SIZE;
         return new Rectangle(
-                (int)(x - hitboxSize/2),
-                (int)(y - hitboxSize/2),
-                hitboxSize,
-                hitboxSize
+                (int)(x - size/2),
+                (int)(y - size/2),
+                size,
+                size
         );
     }
 
     public void hit() {
         health -= 10;
-        if (health <= 0) {
-            System.out.println("Asteroid destroyed!");
+        if (health <= 0 && isLarge) {
+            wasLargeDestroyed = true;
         }
     }
 
@@ -147,5 +124,60 @@ public class Asteroid extends Character {
 
     public boolean isLarge() {
         return isLarge;
+    }
+
+    public boolean wasLargeDestroyed() {
+        return wasLargeDestroyed;
+    }
+
+    @Override
+    public void update() {
+        x += velocityX;
+        y += velocityY;
+        rotationAngle += rotationSpeed;
+        handleScreenBounce();
+    }
+
+    private void handleScreenBounce() {
+        int size = isLarge ? LARGE_HITBOX_SIZE : SMALL_HITBOX_SIZE;
+        int radius = size / 2;
+        boolean bounced = false;
+
+        if (x - radius <= 0) {
+            x = radius;
+            velocityX = Math.abs(velocityX);
+            bounced = true;
+        } else if (x + radius >= SCREEN_WIDTH) {
+            x = SCREEN_WIDTH - radius;
+            velocityX = -Math.abs(velocityX);
+            bounced = true;
+        }
+
+        if (y - radius <= 0) {
+            y = radius;
+            velocityY = Math.abs(velocityY);
+            bounced = true;
+        } else if (y + radius >= SCREEN_HEIGHT) {
+            y = SCREEN_HEIGHT - radius;
+            velocityY = -Math.abs(velocityY);
+            bounced = true;
+        }
+
+        if (bounced) {
+            rotationSpeed = Math.random() * 2 - 1;
+        }
+    }
+
+    public static Asteroid createSmallAsteroid(double x, double y) {
+        double angle = Math.random() * Math.PI * 2;
+        double speed = 1.0 + Math.random();
+        double vx = Math.cos(angle) * speed;
+        double vy = Math.sin(angle) * speed;
+
+        Asteroid smallAsteroid = new Asteroid(x, y, false);
+        smallAsteroid.velocityX = vx;
+        smallAsteroid.velocityY = vy;
+
+        return smallAsteroid;
     }
 }
