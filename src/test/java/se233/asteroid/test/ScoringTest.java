@@ -1,13 +1,12 @@
-package com.se233.asteroid;
+package se233.asteroid.test;
 
-import com.se233.asteroid.controller.GamePanel;
-import com.se233.asteroid.model.*;
+import se233.asteroid.controller.GamePanel;
 import org.junit.jupiter.api.*;
-import java.awt.Rectangle;
+import se233.asteroid.model.*;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.ArrayList;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ScoringTest {

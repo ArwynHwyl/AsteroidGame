@@ -1,6 +1,6 @@
-package com.se233.asteroid;
+package se233.asteroid.test;
 
-import com.se233.asteroid.model.Asteroid;
+import se233.asteroid.model.Asteroid;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

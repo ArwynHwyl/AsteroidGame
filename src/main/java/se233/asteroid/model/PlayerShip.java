@@ -1,4 +1,4 @@
-package com.se233.asteroid.model;
+package se233.asteroid.model;
 
 import org.apache.logging.log4j.LogManager;
 
@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class PlayerShip extends Character {

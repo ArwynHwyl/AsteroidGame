@@ -1,8 +1,8 @@
-package com.se233.asteroid;
+package se233.asteroid.test;
 
-import com.se233.asteroid.model.Boss;
-import com.se233.asteroid.model.Bullet;
-import com.se233.asteroid.model.PlayerShip;
+import se233.asteroid.model.Boss;
+import se233.asteroid.model.Bullet;
+import se233.asteroid.model.PlayerShip;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 

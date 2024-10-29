@@ -1,7 +1,7 @@
-package com.se233.asteroid;
+package se233.asteroid.test;
 
-import com.se233.asteroid.model.PlayerShip;
-import com.se233.asteroid.model.RegularEnemy;
+import se233.asteroid.model.PlayerShip;
+import se233.asteroid.model.RegularEnemy;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

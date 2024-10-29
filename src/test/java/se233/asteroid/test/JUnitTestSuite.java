@@ -1,10 +1,7 @@
-package com.se233.asteroid;
+package se233.asteroid.test;
 
-import com.se233.asteroid.*;
 import javafx.application.Platform;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 

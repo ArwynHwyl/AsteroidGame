@@ -22,7 +22,7 @@
 
     <Loggers>
         <!-- Game specific logger -->
-        <Logger name="com.se233.asteroid.model" level="TRACE" additivity="false">
+        <Logger name="java.se233.asteroid.model" level="TRACE" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="GameFile"/>
         </Logger>

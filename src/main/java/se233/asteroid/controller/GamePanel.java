@@ -1,9 +1,10 @@
-package com.se233.asteroid.controller;
+package se233.asteroid.controller;
 
-import com.se233.asteroid.model.*;
+import se233.asteroid.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import java.util.logging.Level;
+
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;

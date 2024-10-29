@@ -1,6 +1,6 @@
-package com.se233.asteroid; // เพิ่ม package declaration
+package se233.asteroid; // เพิ่ม package declaration
 
-import com.se233.asteroid.controller.GamePanel;
+import se233.asteroid.controller.GamePanel;
 import javax.swing.*;
 
 public class AsteroidLauncher { // เพิ่มการประกาศ class

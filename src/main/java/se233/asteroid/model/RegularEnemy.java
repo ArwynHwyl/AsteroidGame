@@ -1,4 +1,4 @@
-package com.se233.asteroid.model;
+package se233.asteroid.model;
 
 import javax.swing.*;
 import java.awt.*;

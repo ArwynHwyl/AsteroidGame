@@ -1,4 +1,4 @@
-package com.se233.asteroid.model;
+package se233.asteroid.model;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

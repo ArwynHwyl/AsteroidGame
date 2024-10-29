@@ -1,5 +1,5 @@
-package com.se233.asteroid;
-import com.se233.asteroid.model.PlayerShip;
+package se233.asteroid.test;
+import se233.asteroid.model.PlayerShip;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
