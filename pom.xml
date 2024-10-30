@@ -19,6 +19,16 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
     <!-- JavaFX Dependencies -->
     <dependency>
       <groupId>org.openjfx</groupId>
@@ -76,22 +86,32 @@
       <version>1.10.2</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <version>5.10.2</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.10.2</version>
-      <scope>compile</scope>
-    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>se233.asteroid.AsteroidLauncher</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <!-- Plugin สำหรับการ run -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <mainClass>se233.asteroid.AsteroidLauncher</mainClass>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -111,17 +131,6 @@
         <version>3.2.5</version>
         <configuration>
           <useModulePath>false</useModulePath>
-          <argLine>
-            --enable-preview
-            --add-opens java.base/java.lang=ALL-UNNAMED
-            --add-opens java.base/java.util=ALL-UNNAMED
-            --add-opens java.base/java.io=ALL-UNNAMED
-            --add-opens java.desktop/java.awt.image=ALL-UNNAMED
-            --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
-            --add-exports org.junit.platform.commons/org.junit.platform.commons.util=ALL-UNNAMED
-            --add-exports org.junit.platform.commons/org.junit.platform.commons.logging=ALL-UNNAMED
-            -Djunit.jupiter.extensions.autodetection.enabled=true
-          </argLine>
         </configuration>
         <dependencies>
           <dependency>
@@ -137,8 +146,32 @@
         <artifactId>javafx-maven-plugin</artifactId>
         <version>0.0.8</version>
         <configuration>
-          <mainClass>se233.asteroid/se233.asteroid.AsteroidLauncher</mainClass>
+          <mainClass>se233.asteroid.AsteroidLauncher</mainClass>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>se233.asteroid.AsteroidLauncher</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

@@ -172,10 +172,8 @@ public class PlayerShip extends Character {
         velocityX *= DECELERATION;
         velocityY *= DECELERATION;
         isMoving = Math.abs(velocityX) > 0.01 || Math.abs(velocityY) > 0.01;
-        // อัปเดต animation
         updateAnimation();
 
-        // อัปเดตกระสุน
         for (int i = bullets.size() - 1; i >= 0; i--) {
             Bullet bullet = bullets.get(i);
             bullet.update();
@@ -301,15 +299,6 @@ public class PlayerShip extends Character {
                     SINGLE_SPRITE_WIDTH,
                     SINGLE_SPRITE_HEIGHT,
                     null);
-
-            // For debugging: draw hitbox outline
-            g.setColor(Color.RED);
-            g.drawRect(
-                    -SINGLE_SPRITE_WIDTH/2,
-                    -SINGLE_SPRITE_HEIGHT/2,
-                    SINGLE_SPRITE_WIDTH,
-                    SINGLE_SPRITE_HEIGHT
-            );
         }
 
         g.setTransform(old);

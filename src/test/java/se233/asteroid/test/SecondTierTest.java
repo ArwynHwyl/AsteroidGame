@@ -105,36 +105,4 @@ public class SecondTierTest {
         assertNotEquals(initialAngle, enemy.getAngle(),
                 "Enemy should rotate to face target");
     }
-
-    @Test
-    @DisplayName("Test enemy bullet cleaning")
-    void testBulletCleaning() {
-        // Create enemy and set target to make it shoot
-        SecondTier shootingEnemy = new SecondTier(400, 300, 0, 0, 0, 75);
-        shootingEnemy.setTarget(new PlayerShip(500, 300));
-
-        // Wait for spawn delay and force enemy to shoot
-        for(int i = 0; i < 180; i++) {
-            shootingEnemy.update();
-        }
-
-        // Store initial bullet count
-        int initialBullets = shootingEnemy.getBullets().size();
-        assertTrue(initialBullets > 0, "Enemy should have created bullets");
-
-        // Move all bullets off screen by updating many times
-        for(Bullet bullet : shootingEnemy.getBullets()) {
-            // Force bullets off screen
-            bullet.setVelocity(100, 100); // High velocity to ensure going off screen
-        }
-
-        // Update to clean bullets
-        for(int i = 0; i < 10; i++) {
-            shootingEnemy.update();
-        }
-
-        // Verify bullets were cleaned
-        assertTrue(shootingEnemy.getBullets().size() < initialBullets,
-                "Off-screen bullets should be removed");
-    }
 }

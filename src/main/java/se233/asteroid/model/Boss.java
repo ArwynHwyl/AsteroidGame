@@ -34,10 +34,10 @@ public class Boss extends Character {
     private boolean isMoving = true;
 
     // Constants for bullet patterns
-    private static final double SPIRAL_SPEED = 8.0;
-    private static final double SPREAD_SPEED = 8.0;
-    private static final double WAVE_SPEED = 7.0;
-    private static final double CROSS_SPEED = 10.0;
+    private static final double SPIRAL_SPEED = 4.0;
+    private static final double SPREAD_SPEED = 4.0;
+    private static final double WAVE_SPEED = 4.0;
+    private static final double CROSS_SPEED = 5.0;
     //orbital move
     private double orbitAngle = 0;                    // มุมปัจจุบันในการวน
     private PlayerShip target;                        // อ้างอิงถึงผู้เล่น
